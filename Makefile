@@ -1,7 +1,11 @@
 APP_NAME := app.exe
 BUILD_ROUTE := ./bin/${APP_NAME}
-# docker pull, build, run = create new container + start the container
+VERSION_TAG := 0.1.0
+NEW_VERSION_TAG := 0.2.0
+IMAGE_NAME := apooravm/multi_serve
+IMAGE_NAME_WITH_TAG := ${IMAGE_NAME}:${VERSION_TAG}
 
+# docker pull, build, run = create new container + start the container
 postgrescontainer:
 	@docker run --name postgres -p 5432:5432 -e POSTGRES_USER=root -e POSTGRES_PASSWORD=1234 -d postgres:15-alpine
 
@@ -10,11 +14,23 @@ echoinstall:
 
 # Building docker image
 dockerbuild:
-	@docker build -t uninote .
+	@docker build -t ${IMAGE_NAME_WITH_TAG} .
+
+# change the tag name??
+# The docker tag command in Docker is used to create a new tag for an existing Docker image. 
+# docker tag SOURCE_IMAGE[:TAG] TARGET_IMAGE[:TAG]
+# docker tag myname/myimage:1.0 myname/myimage:latest
+dockertagchange:
+	@docker tag ${IMAGE_NAME_WITH_TAG} ${IMAGE_NAME}:${NEW_VERSION_TAG}
+
+# push to dockerhub
+dockerpush:
+	@docker push ${IMAGE_NAME_WITH_TAG}
 
 # Creating container from image and starting it
+# multi-serve-container
 dockerrun:
-	@docker run --name uninote-container -p 5000:5000 -e PORT=5000 -d uninote
+	@docker run --name ms-cont -p 5000:5000 -e PORT=5000 -d ${IMAGE_NAME_WITH_TAG}
 
 # dep install
 install:
@@ -32,5 +48,5 @@ vendor: tidy
 run: vendor build
 	@${BUILD_ROUTE}
 
-dev:
+dev: build
 	@${BUILD_ROUTE}

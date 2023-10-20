@@ -1,4 +1,4 @@
-module github.com/apooravm/uninote
+module github.com/apooravm/multi-serve
 
 go 1.21.3
 

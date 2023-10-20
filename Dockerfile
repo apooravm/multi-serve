@@ -6,8 +6,7 @@ WORKDIR /src
 
 COPY . .
 
-RUN make install
-RUN make vendor
+RUN make install && make vendor
 
 ENV PORT=4000
 

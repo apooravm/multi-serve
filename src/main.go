@@ -9,6 +9,8 @@ import (
 
 	"encoding/json"
 
+	routes "github.com/apooravm/multi-serve/src/routes"
+
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -27,14 +29,23 @@ func main() {
 	e := echo.New()
 	e.Use(middleware.CORS())
 
+	e.Static("/", "public")
+
 	e.GET("/api/cronping", func(c echo.Context) error {
 		return c.String(http.StatusOK, "sup")
 	})
 
+	// ----
+	e.GET("/api/signup", routes.SignupHandler)
+	e.GET("/api/login", routes.LoginHandler)
+	// ----
+
 	e.GET("/pathParams/:name", getPathParams)
 	e.GET("/queryParams/:name", getQueryParams)
 	e.POST("/user", postUser)
-	e.Static("/", "public")
+	e.GET("/api/resume", func(c echo.Context) error {
+		return c.File("./data/Apoorav_Medal_CV.pdf")
+	})
 
 	fmt.Printf("Live on %v", PORT)
 	e.Logger.Fatal(e.Start(":" + PORT))
