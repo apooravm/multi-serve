@@ -1,7 +1,7 @@
 APP_NAME := app.exe
 BUILD_ROUTE := ./bin/${APP_NAME}
-VERSION_TAG := 0.1.0
-NEW_VERSION_TAG := 0.2.0
+VERSION_TAG := latest
+NEW_VERSION_TAG := 0.2.1
 IMAGE_NAME := apooravm/multi_serve
 IMAGE_NAME_WITH_TAG := ${IMAGE_NAME}:${VERSION_TAG}
 
@@ -31,6 +31,11 @@ dockerpush:
 # multi-serve-container
 dockerrun:
 	@docker run --name ms-cont -p 5000:5000 -e PORT=5000 -d ${IMAGE_NAME_WITH_TAG}
+
+awssdk:
+	@go get github.com/aws/aws-sdk-go-v2
+	@go get github.com/aws/aws-sdk-go-v2/config
+	@go get github.com/aws/aws-sdk-go-v2/service/s3
 
 # dep install
 install:

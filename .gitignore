@@ -24,4 +24,7 @@ bin/*
 
 # Env variables
 .env
-data/
+data/S3/*
+
+# data files
+*.pdf
