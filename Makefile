@@ -5,6 +5,9 @@ NEW_VERSION_TAG := 0.2.1
 IMAGE_NAME := apooravm/multi_serve
 IMAGE_NAME_WITH_TAG := ${IMAGE_NAME}:${VERSION_TAG}
 
+init:
+	@mkdir data/S3
+
 # docker pull, build, run = create new container + start the container
 postgrescontainer:
 	@docker run --name postgres -p 5432:5432 -e POSTGRES_USER=root -e POSTGRES_PASSWORD=1234 -d postgres:15-alpine
