@@ -19,14 +19,17 @@ func main() {
 	PORT := os.Getenv("PORT")
 	e := echo.New()
 	e.Use(middleware.CORS())
+	e.Use(middleware.Logger())
+	e.Use(middleware.Recover())
 
 	e.Static("/", "public")
 
-	e.GET("/api/signup", routes.SignupHandler)
-	e.GET("/api/login", routes.LoginHandler)
-	e.GET("/api/resume", routes.GetResume)
-	e.GET("/api/cronping", routes.CronPing)
+	DefaultGroup(e.Group(""))
 
 	fmt.Printf("Live on %v", PORT)
 	e.Logger.Fatal(e.Start(":" + PORT))
+}
+
+func DefaultGroup(group *echo.Group) {
+	routes.ApiGroup(group.Group("/api"))
 }

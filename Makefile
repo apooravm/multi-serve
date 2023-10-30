@@ -12,8 +12,9 @@ init:
 postgrescontainer:
 	@docker run --name postgres -p 5432:5432 -e POSTGRES_USER=root -e POSTGRES_PASSWORD=1234 -d postgres:15-alpine
 
-echoinstall:
+depinstall:
 	@go get github.com/labstack/echo/v4
+	@go get github.com/gorilla/websocket
 
 # Building docker image
 dockerbuild:
@@ -46,6 +47,7 @@ install:
 
 build:
 	@go build -o ${BUILD_ROUTE} ./src/main.go
+	@echo "Finished building"
 
 tidy:
 	@go mod tidy
@@ -54,6 +56,7 @@ vendor: tidy
 	@go mod vendor
 
 run: vendor build
+	@echo "Running the binary..."
 	@${BUILD_ROUTE}
 
 dev: build
