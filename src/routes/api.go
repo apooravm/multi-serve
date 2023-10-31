@@ -16,6 +16,7 @@ import (
 func ApiGroup(group *echo.Group) {
 	group.GET("/resume", GetResume)
 	group.GET("/cronping", CronPing)
+	group.GET("/logs", GetLoggedData)
 
 	group.GET("/chat", Chat)
 	NotesGroup(group.Group("/notes"))
@@ -64,6 +65,19 @@ func GetResume(c echo.Context) error {
 
 func CronPing(c echo.Context) error {
 	return c.String(http.StatusOK, "sup")
+}
+
+func GetLoggedData(c echo.Context) error {
+	pass := c.QueryParam("pass")
+	if os.Getenv("QUERY_GENERAL_PASS") == pass {
+		return c.File("./data/logs.json")
+
+	} else {
+		return c.JSON(echo.ErrUnauthorized.Code, &utils.ErrorMessage{
+			Code:    echo.ErrUnauthorized.Code,
+			Message: "Incorrect Credentials",
+		})
+	}
 }
 
 func readJsonFile(path string) {

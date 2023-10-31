@@ -1,6 +1,9 @@
 package utils
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 type User struct {
 	Name string `json:"name"`
@@ -18,4 +21,17 @@ func (e *ErrorMessage) Error() string {
 
 type SuccessMessage struct {
 	Message string `json:"message"`
+}
+
+type Log struct {
+	ContentLength string
+	Error         error
+	Host          string
+	Latency       time.Duration
+	RemoteIP      string
+	ResponseSize  int64
+	Time          time.Time
+	Status        int
+	URI           string
+	Protocol      string
 }
