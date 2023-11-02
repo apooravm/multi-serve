@@ -2,5 +2,7 @@ vendor/*
 bin/*
 .env
 data/S3/*
+data/notes/*
+data/logs.json
 *.pdf
 notes.txt

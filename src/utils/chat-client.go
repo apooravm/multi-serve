@@ -52,12 +52,6 @@ func (ce *ServerError) Error() string {
 	return fmt.Sprintf("%v", ce.Simple)
 }
 
-var (
-	CHAT_DEBUG = os.Getenv("CHAT_DEBUG")
-	CHAT_LOG   = os.Getenv("CHAT_LOG")
-	CHAT_PASS  = os.Getenv("CHAT_PASS")
-)
-
 func NewClientsMap() *ClientsMap {
 	return &ClientsMap{
 		Clients: make(map[string]Client),

@@ -65,7 +65,7 @@ func DownloadAllObjKeys(bucketName string, objPath string, region string) ([]str
 }
 
 func DownloadAndWriteNoteData() error {
-	objKeyArr, err := DownloadAllObjKeys(os.Getenv("BUCKET_NAME"), os.Getenv("NOTES_DATA_FOLDER"), os.Getenv("BUCKET_REGION"))
+	objKeyArr, err := DownloadAllObjKeys(BUCKET_NAME, NOTES_DATA_FOLDER, BUCKET_REGION)
 	if err != nil {
 		return &ErrorMessage{
 			Code:    500,
@@ -74,7 +74,7 @@ func DownloadAndWriteNoteData() error {
 	}
 
 	for _, objKey := range objKeyArr[1:] {
-		file, err := DownloadFile(os.Getenv("BUCKET_NAME"), objKey, os.Getenv("BUCKET_REGION"))
+		file, err := DownloadFile(BUCKET_NAME, objKey, BUCKET_REGION)
 		if err != nil {
 			return &ErrorMessage{
 				Code:    500,

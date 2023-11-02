@@ -12,6 +12,15 @@ func FileExists(filePath string) bool {
 	return !os.IsNotExist(err)
 }
 
+// Create the required directories
+func InitDirs() {
+	createDirPath := "./data/logs"
+	err := os.MkdirAll(createDirPath, os.ModePerm)
+	if err != nil {
+		panic(err)
+	}
+}
+
 func AppendLogToFile(data *Log, filePath string) error {
 	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE, os.ModePerm)
 

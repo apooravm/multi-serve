@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"log"
-	"os"
 
 	"github.com/apooravm/multi-serve/src/routes"
 	"github.com/apooravm/multi-serve/src/utils"
@@ -17,9 +16,10 @@ func main() {
 	if err := godotenv.Load(); err != nil {
 		log.Printf("Error loading .env file")
 	}
-	PORT := os.Getenv("PORT")
-	utils.CHAT_DEBUG = os.Getenv("CHAT_DEBUG")
-	utils.CHAT_LOG = os.Getenv("CHAT_LOG")
+	utils.InitGlobalVars()
+	utils.InitDirs()
+
+	PORT := utils.PORT
 
 	e := echo.New()
 	e.Use(middleware.CORS())
@@ -43,7 +43,7 @@ func main() {
 				URI:           v.URI,
 				Protocol:      v.Protocol,
 			}
-			if err := utils.AppendLogToFile(&data, os.Getenv("REQUEST_LOG_PATH")); err != nil {
+			if err := utils.AppendLogToFile(&data, utils.REQUEST_LOG_PATH); err != nil {
 				fmt.Println(err)
 			}
 			return nil

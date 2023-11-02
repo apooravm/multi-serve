@@ -2,7 +2,6 @@ package routes
 
 import (
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 
@@ -31,7 +30,7 @@ func Chat(c echo.Context) error {
 			return nil
 		}
 
-		if clientMessage.Password != os.Getenv("CHAT_PASS") {
+		if clientMessage.Password != utils.CHAT_PASS {
 			conn.Close()
 			return nil
 		}

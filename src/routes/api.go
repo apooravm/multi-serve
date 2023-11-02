@@ -16,6 +16,8 @@ func ApiGroup(group *echo.Group) {
 	group.GET("/logs", GetLoggedData)
 
 	group.GET("/chat", Chat)
+	group.GET("/chat/logs", GetChatLogs)
+	group.GET("/chat/debug", GetChatDebug)
 	NotesGroup(group.Group("/notes"))
 }
 
@@ -24,13 +26,13 @@ func ApiGroup(group *echo.Group) {
 // Else download to the location
 // Reduction in S3 fetching cost
 func GetResume(c echo.Context) error {
-	resumeFilePath := os.Getenv("LOCAL_RESUME_PATH")
+	resumeFilePath := utils.LOCAL_RESUME_PATH
 
 	// Downloading the file from Bucket
 	if !utils.FileExists(resumeFilePath) {
-		file, err := utils.DownloadFile(os.Getenv("BUCKET_NAME"),
-			os.Getenv("OBJ_RESUME_KEY"),
-			os.Getenv("BUCKET_REGION"))
+		file, err := utils.DownloadFile(utils.BUCKET_NAME,
+			utils.OBJ_RESUME_KEY,
+			utils.BUCKET_REGION)
 
 		if err != nil {
 			errMsg := utils.ErrorMessage{
@@ -60,13 +62,37 @@ func GetResume(c echo.Context) error {
 	return c.File(resumeFilePath)
 }
 
+func GetChatDebug(c echo.Context) error {
+	pass := c.QueryParam("pass")
+	if utils.QUERY_GENERAL_PASS == pass {
+		return c.File(utils.CHAT_DEBUG)
+	} else {
+		return c.JSON(echo.ErrUnauthorized.Code, &utils.ErrorMessage{
+			Code:    echo.ErrUnauthorized.Code,
+			Message: "Incorrect Credentials",
+		})
+	}
+}
+
+func GetChatLogs(c echo.Context) error {
+	pass := c.QueryParam("pass")
+	if utils.QUERY_GENERAL_PASS == pass {
+		return c.File(utils.CHAT_LOG)
+	} else {
+		return c.JSON(echo.ErrUnauthorized.Code, &utils.ErrorMessage{
+			Code:    echo.ErrUnauthorized.Code,
+			Message: "Incorrect Credentials",
+		})
+	}
+}
+
 func CronPing(c echo.Context) error {
 	return c.String(http.StatusOK, "sup")
 }
 
 func GetLoggedData(c echo.Context) error {
 	pass := c.QueryParam("pass")
-	if os.Getenv("QUERY_GENERAL_PASS") == pass {
+	if utils.QUERY_GENERAL_PASS == pass {
 		return c.File("./data/logs.json")
 
 	} else {

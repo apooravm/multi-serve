@@ -123,7 +123,7 @@ func findPostPath(rootPath string, postID string) (string, *utils.ErrorMessage) 
 }
 
 func GetRootInfo(c echo.Context) error {
-	infoJsonPath := os.Getenv("LOCAL_INFO_PATH")
+	infoJsonPath := utils.LOCAL_INFO_PATH
 	data, err := os.ReadFile(infoJsonPath)
 	if err != nil {
 		return c.JSON(echo.ErrInternalServerError.Code, &utils.ErrorMessage{
@@ -146,7 +146,7 @@ func GetRootInfo(c echo.Context) error {
 
 func triggerPostDownload(c echo.Context) error {
 	qPass := c.QueryParam("pass")
-	if os.Getenv("QUERY_TRIGGER_PASS") == qPass {
+	if utils.QUERY_TRIGGER_PASS == qPass {
 		if err := utils.DownloadAndWriteNoteData(); err != nil {
 			return c.JSON(echo.ErrInternalServerError.Code, &utils.ErrorMessage{
 				Code:    echo.ErrInternalServerError.Code,
