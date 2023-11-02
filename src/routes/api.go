@@ -1,10 +1,7 @@
 package routes
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
-	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -78,54 +75,4 @@ func GetLoggedData(c echo.Context) error {
 			Message: "Incorrect Credentials",
 		})
 	}
-}
-
-func readJsonFile(path string) {
-	file, err := os.Open(path)
-	if err != nil {
-		log.Fatalf("Error Opening %v", err)
-	}
-
-	defer file.Close()
-
-	content, err := io.ReadAll(file)
-	if err != nil {
-		log.Fatalf("Error reading the file %v", err)
-	}
-
-	var items []utils.User
-
-	if err := json.Unmarshal(content, &items); err != nil {
-		log.Fatalf("Error unmarshalling: %v", err)
-		return
-	}
-
-	fmt.Println("Items: ", items)
-
-	items = append(items, utils.User{Name: "mrBruh", Age: 39})
-
-	updatedData, err := json.MarshalIndent(items, "", " ")
-	if err != nil {
-		log.Fatalf("Error Marshalling %v", err)
-		return
-	}
-
-	if err := os.WriteFile(path, updatedData, 0644); err != nil {
-		log.Fatalf("Error Writing to File %v", err)
-		return
-	}
-
-	// fmt.Println(content)
-
-	// var items []map[string]interface{}
-	// if err := json.Unmarshal(content, &items); err != nil {
-	// 	fmt.Println("Error unmarshaling JSON:", err)
-	// 	return
-	// }
-
-	// // fmt.Println(items)
-	// for key, value := range items {
-	// 	fmt.Println(key, value)
-	// }
-
 }

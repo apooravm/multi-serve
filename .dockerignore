@@ -3,3 +3,4 @@ bin/*
 .env
 data/S3/*
 *.pdf
+notes.txt
