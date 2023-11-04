@@ -26,6 +26,7 @@ bin/*
 .env
 data/S3/*
 data/notes/*
+data/logs/*
 
 # data files
 *.pdf

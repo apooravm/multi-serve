@@ -2,7 +2,6 @@ package routes
 
 import (
 	"encoding/json"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -14,45 +13,31 @@ import (
 func NotesGroup(group *echo.Group) {
 	group.GET("/update", triggerPostDownload)
 	group.GET("/info", GetRootInfo)
-	group.GET("/:id", GetPostContentPaths)
-	group.GET("/data/*", GetPostData)
+	group.GET("/:slug", GetMarkdownFromSlug)
+	group.GET("/media/:file", GetNotesMedia)
 
 }
 
-func GetPostData(c echo.Context) error {
-	relPath := c.Param("*")
-	basePath := "./data/notes"
-	absPath := filepath.Join(basePath, relPath)
-
-	// Check if file exists
-	_, err := os.Stat(absPath)
-	if err != nil {
+func GetMarkdownFromSlug(c echo.Context) error {
+	filename := c.Param("slug")
+	if err := c.File("./data/notes/markdowns/" + filename); err != nil {
 		return c.JSON(echo.ErrNotFound.Code, &utils.ErrorMessage{
 			Code:    echo.ErrNotFound.Code,
 			Message: "Requested file doesnt exist",
 		})
 	}
-
-	return c.File(absPath)
+	return nil
 }
 
-// Serves the filepath locations of all the file contents of a post ID
-func GetPostContentPaths(c echo.Context) error {
-	postID := c.Param("id")
-	rootPath := "./data/notes/"
-
-	postPath, err := findPostPath(rootPath, postID)
-	if err != nil {
-		return c.JSON(echo.ErrInternalServerError.Code, err)
+func GetNotesMedia(c echo.Context) error {
+	filename := c.Param("file")
+	if err := c.File("./data/notes/media/" + filename); err != nil {
+		return c.JSON(echo.ErrNotFound.Code, &utils.ErrorMessage{
+			Code:    echo.ErrNotFound.Code,
+			Message: "Requested file doesnt exist",
+		})
 	}
-
-	trimPrefix := "data/notes"
-	paths, err := getAllFilePaths(postPath, trimPrefix)
-	if err != nil {
-		return c.JSON(echo.ErrInternalServerError.Code, err)
-	}
-
-	return c.JSON(http.StatusOK, paths)
+	return nil
 }
 
 func getAllFilePaths(postPath string, trimPrefix string) (*[]string, *utils.ErrorMessage) {
@@ -150,7 +135,7 @@ func triggerPostDownload(c echo.Context) error {
 		if err := utils.DownloadAndWriteNoteData(); err != nil {
 			return c.JSON(echo.ErrInternalServerError.Code, &utils.ErrorMessage{
 				Code:    echo.ErrInternalServerError.Code,
-				Message: "Server Error, Error fetching data from S3 Bucket",
+				Message: "Server Error, Error fetching data from S3 Bucket: " + err.Error(),
 			})
 		}
 		return c.JSON(200, &utils.SuccessMessage{

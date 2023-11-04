@@ -1,7 +1,7 @@
 APP_NAME := app.exe
 BUILD_ROUTE := ./bin/${APP_NAME}
 VERSION_TAG := latest
-NEW_VERSION_TAG := 0.2.6
+NEW_VERSION_TAG := 0.2.7
 IMAGE_NAME := apooravm/multi_serve
 IMAGE_NAME_WITH_TAG := ${IMAGE_NAME}:${VERSION_TAG}
 CURR_DATE_TIME := @powershell -Command "Get-Date -Format 'dd MMMM yyyy HH:mm'"

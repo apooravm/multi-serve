@@ -3,6 +3,6 @@ bin/*
 .env
 data/S3/*
 data/notes/*
-data/logs.json
+data/logs/*
 *.pdf
 notes.txt
