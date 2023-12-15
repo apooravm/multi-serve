@@ -18,6 +18,7 @@ func main() {
 	}
 	utils.InitGlobalVars()
 	utils.InitDirs()
+	utils.InitVars()
 
 	PORT := utils.PORT
 

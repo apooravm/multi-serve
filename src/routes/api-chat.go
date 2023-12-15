@@ -137,7 +137,7 @@ func BroadcastServerMessageAll(payload string) {
 	}
 }
 
-// Handle CLient socket disconnection
+// Handle Client socket disconnection
 // Graceful handling prevents error logs
 func ClientDisconnect(conn *websocket.Conn, client_id string, client *utils.Client) {
 	conn.Close()

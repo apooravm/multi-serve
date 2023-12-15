@@ -22,7 +22,21 @@ type Message struct {
 	Config    string
 	Content   string
 	Password  string
+	Timestamp string
 }
+
+/*
+interface Message {
+    Id: number
+    Sender: string;
+    Direction: string;
+    Config: string;
+    Content: string;
+    Password: string;
+    Timestamp: string;
+  }
+
+*/
 
 type ClientsMap struct {
 	Clients map[string]Client

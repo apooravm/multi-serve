@@ -1,10 +1,14 @@
 APP_NAME := app.exe
 BUILD_ROUTE := ./bin/${APP_NAME}
 VERSION_TAG := latest
-NEW_VERSION_TAG := 0.2.7
+OLD_VERSION_TAG := 0.2.6
 IMAGE_NAME := apooravm/multi_serve
 IMAGE_NAME_WITH_TAG := ${IMAGE_NAME}:${VERSION_TAG}
 CURR_DATE_TIME := @powershell -Command "Get-Date -Format 'dd MMMM yyyy HH:mm'"
+
+# Docker flow
+# Change the current image tag from latest to vNum
+# docker build => push
 
 .PHONY: git
 
@@ -28,7 +32,7 @@ dockerbuild:
 # docker tag SOURCE_IMAGE[:TAG] TARGET_IMAGE[:TAG]
 # docker tag myname/myimage:1.0 myname/myimage:latest
 dockertagchange:
-	@docker tag ${IMAGE_NAME_WITH_TAG} ${IMAGE_NAME}:${NEW_VERSION_TAG}
+	@docker tag ${IMAGE_NAME_WITH_TAG} ${IMAGE_NAME}:${OLD_VERSION_TAG}
 
 # push to dockerhub
 dockerpush:
@@ -55,8 +59,8 @@ install:
 	@go mod download
 
 build:
+	@echo "building..."
 	@go build -o ${BUILD_ROUTE} ./src/main.go
-	@echo "Finished building"
 
 tidy:
 	@go mod tidy
