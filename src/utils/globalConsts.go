@@ -20,6 +20,9 @@ var (
 
 	QUERY_GENERAL_PASS string
 	QUERY_TRIGGER_PASS string
+
+	DB_URL     string
+	DB_API_KEY string
 )
 
 func InitGlobalVars() {
@@ -43,4 +46,7 @@ func InitGlobalVars() {
 	OBJ_RESUME_KEY = os.Getenv("OBJ_RESUME_KEY")
 
 	QUERY_GENERAL_PASS = os.Getenv("QUERY_GENERAL_PASS")
+
+	DB_URL = os.Getenv("DB_URL")
+	DB_API_KEY = os.Getenv("DB_KEY")
 }

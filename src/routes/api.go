@@ -21,6 +21,7 @@ func ApiGroup(group *echo.Group) {
 	FileTransferGroup(group.Group("/filetransfer"))
 	MiscGroup(group.Group("/misc"))
 	JournalLoggerGroup(group.Group(("/journal")))
+	UserGroup(group.Group("/user"))
 }
 
 // Refreshes the local server Data

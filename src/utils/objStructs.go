@@ -9,11 +9,6 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type User struct {
-	Name string `json:"name"`
-	Age  int    `json:"age"`
-}
-
 type ErrorMessage struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
@@ -116,3 +111,10 @@ func InitVars() {
 var (
 	S3_Files = []S3_File{}
 )
+
+type UserProfile struct {
+	Id       int    `json:"id"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+	Email    string `json:"email"`
+}
