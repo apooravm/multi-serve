@@ -10,20 +10,6 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func InternalServerErr(messageStr string) utils.ErrorMessage {
-	return utils.ErrorMessage{
-		Code:    echo.ErrInternalServerError.Code,
-		Message: messageStr,
-	}
-}
-
-func ClientErr(messageStr string) utils.ErrorMessage {
-	return utils.ErrorMessage{
-		Code:    echo.ErrBadRequest.Code,
-		Message: messageStr,
-	}
-}
-
 // /api/journal
 func JournalLoggerGroup(group *echo.Group) {
 	group.GET("/log", GetJournalLogs)
@@ -36,24 +22,24 @@ func GetJournalLogs(c echo.Context) error {
 	var newLogReq UserLogReq
 	if err := c.Bind(&newLogReq); err != nil {
 		return c.JSON(echo.ErrInternalServerError.Code,
-			InternalServerErr("Invalid Credential Format"+err.Error()))
+			utils.InternalServerErr("Invalid Credential Format"+err.Error()))
 	}
 
 	// Get user_id
 	userProfiles, err := getUserFromUsername(newLogReq.Username)
 	if err != nil {
 		return c.JSON(echo.ErrInternalServerError.Code,
-			InternalServerErr("DB Error. "+err.Error()))
+			utils.InternalServerErr("DB Error. "+err.Error()))
 	}
 
 	if len(userProfiles) == 0 {
-		return c.JSON(echo.ErrBadRequest.Code, ClientErr("Invalid Credentials"))
+		return c.JSON(echo.ErrBadRequest.Code, utils.ClientErr("Invalid Credentials"))
 	}
 
 	// Auth Password
 	userFromDB := userProfiles[0]
 	if userFromDB.Password != newLogReq.Password {
-		return c.JSON(echo.ErrBadRequest.Code, ClientErr("Invalid Password"))
+		return c.JSON(echo.ErrBadRequest.Code, utils.ClientErr("Invalid Password"))
 	}
 
 	url := utils.DB_URL + "userlog?select=created_at,log_message"
@@ -62,7 +48,7 @@ func GetJournalLogs(c echo.Context) error {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return c.JSON(echo.ErrInternalServerError.Code,
-			InternalServerErr("Error Creating Request"))
+			utils.InternalServerErr("Error Creating Request"))
 	}
 
 	req.Header.Set("apiKey", apiKey)
@@ -71,7 +57,7 @@ func GetJournalLogs(c echo.Context) error {
 
 	limitInt, err := strconv.Atoi(limit)
 	if err != nil {
-		return c.JSON(echo.ErrBadRequest.Code, ClientErr("Invalid Limit"))
+		return c.JSON(echo.ErrBadRequest.Code, utils.ClientErr("Invalid Limit"))
 	}
 
 	if len(limit) != 0 && limitInt > -1 {
@@ -82,7 +68,7 @@ func GetJournalLogs(c echo.Context) error {
 	res, err := client.Do(req)
 	if err != nil {
 		return c.JSON(echo.ErrInternalServerError.Code,
-			InternalServerErr("Error Sending Request. "+err.Error()))
+			utils.InternalServerErr("Error Sending Request. "+err.Error()))
 	}
 
 	defer res.Body.Close()
@@ -92,12 +78,12 @@ func GetJournalLogs(c echo.Context) error {
 	if res.StatusCode >= 200 && res.StatusCode < 300 {
 		if err := json.NewDecoder(res.Body).Decode(&resLog); err != nil {
 			return c.JSON(echo.ErrInternalServerError.Code,
-				InternalServerErr("Error Unmarshalling Request"+err.Error()))
+				utils.InternalServerErr("Error Unmarshalling Request"+err.Error()))
 		}
 
 	} else {
 		return c.JSON(echo.ErrInternalServerError.Code,
-			InternalServerErr("Something went wrong"+err.Error()))
+			utils.InternalServerErr("Something went wrong"+err.Error()))
 	}
 
 	return c.JSON(200, &resLog)
@@ -128,24 +114,24 @@ func PostJournalLogEntry(c echo.Context) error {
 	var newLogReq UserLogReq
 	if err := c.Bind(&newLogReq); err != nil {
 		return c.JSON(echo.ErrInternalServerError.Code,
-			InternalServerErr("Invalid Credential Format"+err.Error()))
+			utils.InternalServerErr("Invalid Credential Format"+err.Error()))
 	}
 
 	// Get user_id
 	userProfiles, err := getUserFromUsername(newLogReq.Username)
 	if err != nil {
 		return c.JSON(echo.ErrInternalServerError.Code,
-			InternalServerErr("Error Updating db. "+err.Error()))
+			utils.InternalServerErr("Error Updating db. "+err.Error()))
 	}
 
 	if len(userProfiles) == 0 {
-		return c.JSON(echo.ErrBadRequest.Code, ClientErr("Invalid Credentials"))
+		return c.JSON(echo.ErrBadRequest.Code, utils.ClientErr("Invalid Credentials"))
 	}
 
 	// Auth Password
 	userFromDB := userProfiles[0]
 	if userFromDB.Password != newLogReq.Password {
-		return c.JSON(echo.ErrBadRequest.Code, ClientErr("Invalid Password"))
+		return c.JSON(echo.ErrBadRequest.Code, utils.ClientErr("Invalid Password"))
 	}
 
 	newLog := UserLogDb{
@@ -159,13 +145,13 @@ func PostJournalLogEntry(c echo.Context) error {
 	logBytes, err := json.Marshal(&newLog)
 	if err != nil {
 		return c.JSON(echo.ErrInternalServerError.Code,
-			InternalServerErr("Error Marshalling"))
+			utils.InternalServerErr("Error Marshalling"))
 	}
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(logBytes))
 	if err != nil {
 		return c.JSON(echo.ErrInternalServerError.Code,
-			InternalServerErr("Error Creating Request"))
+			utils.InternalServerErr("Error Creating Request"))
 	}
 
 	req.Header.Set("apiKey", apiKey)
@@ -177,7 +163,7 @@ func PostJournalLogEntry(c echo.Context) error {
 	res, err := client.Do(req)
 	if err != nil {
 		return c.JSON(echo.ErrInternalServerError.Code,
-			InternalServerErr("Error Sending Request"))
+			utils.InternalServerErr("Error Sending Request"))
 	}
 
 	defer res.Body.Close()
@@ -188,10 +174,7 @@ func PostJournalLogEntry(c echo.Context) error {
 		})
 
 	} else {
-		return c.JSON(echo.ErrInternalServerError.Code, &utils.ErrorMessage{
-			Code:    echo.ErrInternalServerError.Code,
-			Message: "Something went wrong. " + res.Status,
-		})
+		return c.JSON(echo.ErrInternalServerError.Code, utils.InternalServerErr("Something went wrong. "+res.Status))
 	}
 }
 

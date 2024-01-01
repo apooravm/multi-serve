@@ -118,3 +118,10 @@ type UserProfile struct {
 	Password string `json:"password"`
 	Email    string `json:"email"`
 }
+
+// The Id in UserProfile defaults to 0 which results in a conflict
+type UserRegister struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+	Email    string `json:"email"`
+}

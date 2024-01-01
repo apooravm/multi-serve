@@ -12,73 +12,26 @@ import (
 
 func UserGroup(group *echo.Group) {
 	group.POST("/register", registerNewUser)
-	group.GET("/all", getAllUsers)
 }
 
-func getAllUsers(c echo.Context) error {
-	url := os.Getenv("DB_URL") + "userprofile?select=*"
-	apiKey := os.Getenv("DB_KEY")
-
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return c.JSON(echo.ErrInternalServerError.Code, &utils.ErrorMessage{
-			Code:    echo.ErrInternalServerError.Code,
-			Message: "Error Updating db: " + err.Error(),
-		})
-	}
-
-	req.Header.Set("apiKey", apiKey)
-	req.Header.Set("Authorization", "Bearer"+apiKey)
-	req.Header.Set("Content-Type", "application/json")
-
-	client := &http.Client{}
-	res, err := client.Do(req)
-	if err != nil {
-		return c.JSON(echo.ErrInternalServerError.Code, &utils.ErrorMessage{
-			Code:    echo.ErrInternalServerError.Code,
-			Message: "Error Updating db 2: " + err.Error(),
-		})
-	}
-
-	defer res.Body.Close()
-
-	var resBody interface{}
-
-	if err := json.NewDecoder(res.Request.Body).Decode(&resBody); err != nil {
-		return c.JSON(echo.ErrInternalServerError.Code, &utils.ErrorMessage{
-			Code:    echo.ErrInternalServerError.Code,
-			Message: "Error Unmarshalling: " + err.Error(),
-		})
-	}
-
-	return c.JSON(200, resBody)
-}
-
+// No need to check against the user table
+// If conflict, return it back
 func registerNewUser(c echo.Context) error {
 	// Reading and validating request body
-	var newUser utils.UserProfile
+	var newUser utils.UserRegister
 
 	if err := c.Bind(&newUser); err != nil {
-		return c.JSON(echo.ErrInternalServerError.Code, &utils.ErrorMessage{
-			Code:    echo.ErrInternalServerError.Code,
-			Message: "Error binding:" + err.Error(),
-		})
+		return c.JSON(echo.ErrInternalServerError.Code, utils.InternalServerErr("Error binding:"+err.Error()))
 	}
 
 	if len(newUser.Email) == 0 || len(newUser.Username) == 0 || len(newUser.Password) == 0 {
-		return c.JSON(echo.ErrBadRequest.Code, &utils.ErrorMessage{
-			Code:    echo.ErrBadRequest.Code,
-			Message: "Incomplete Credentials",
-		})
+		return c.JSON(echo.ErrBadRequest.Code, utils.ClientErr("Incomplete Credentials"))
 	}
 
 	// Marshalling newUser to string array
 	jsonBytes, err := json.Marshal(newUser)
 	if err != nil {
-		return c.JSON(echo.ErrBadRequest.Code, &utils.ErrorMessage{
-			Code:    echo.ErrBadRequest.Code,
-			Message: "Error reading request contents:" + err.Error(),
-		})
+		return c.JSON(echo.ErrBadRequest.Code, utils.ClientErr("Error reading request contents:"+err.Error()))
 	}
 
 	url := os.Getenv("DB_URL") + "userprofile"
@@ -87,10 +40,7 @@ func registerNewUser(c echo.Context) error {
 	// Creating and sending request
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonBytes))
 	if err != nil {
-		return c.JSON(echo.ErrInternalServerError.Code, &utils.ErrorMessage{
-			Code:    echo.ErrInternalServerError.Code,
-			Message: "Error Updating db: " + err.Error(),
-		})
+		return c.JSON(echo.ErrInternalServerError.Code, utils.InternalServerErr("Error Updating db: "+err.Error()))
 	}
 
 	req.Header.Set("apiKey", apiKey)
@@ -101,10 +51,7 @@ func registerNewUser(c echo.Context) error {
 	client := &http.Client{}
 	res, err := client.Do(req)
 	if err != nil {
-		return c.JSON(echo.ErrInternalServerError.Code, &utils.ErrorMessage{
-			Code:    echo.ErrInternalServerError.Code,
-			Message: "Error Updating db 2: " + err.Error(),
-		})
+		return c.JSON(echo.ErrInternalServerError.Code, utils.InternalServerErr("Error Updating db 2: "+err.Error()))
 	}
 
 	defer res.Body.Close()

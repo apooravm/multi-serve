@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+
+	"github.com/labstack/echo/v4"
 )
 
 func FileExists(filePath string) bool {
@@ -99,3 +101,17 @@ func AppendLogToFile(data *Log, filePath string) error {
 // 	}
 // 	return dataMap[key]
 // }
+
+func InternalServerErr(messageStr string) ErrorMessage {
+	return ErrorMessage{
+		Code:    echo.ErrInternalServerError.Code,
+		Message: messageStr,
+	}
+}
+
+func ClientErr(messageStr string) ErrorMessage {
+	return ErrorMessage{
+		Code:    echo.ErrBadRequest.Code,
+		Message: messageStr,
+	}
+}
