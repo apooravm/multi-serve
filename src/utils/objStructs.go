@@ -99,11 +99,17 @@ func S3_DownloadFiles() error {
 	return nil
 }
 
+// Currently only 2 files
+// The resume pdf and png
 func InitVars() {
 	S3_Files = []S3_File{
 		{
 			LocalFilePath:   LOCAL_RESUME_PATH,
 			BucketObjectKey: OBJ_RESUME_KEY,
+		},
+		{
+			LocalFilePath:   LOCAL_RESUME_PNG_PATH,
+			BucketObjectKey: OBJ_RESUME_PNG_KEY,
 		},
 	}
 }

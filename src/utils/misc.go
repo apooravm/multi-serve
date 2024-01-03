@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"time"
 
 	"github.com/labstack/echo/v4"
 )
@@ -20,6 +21,33 @@ func InitDirs() {
 	err := os.MkdirAll(createDirPath, os.ModePerm)
 	if err != nil {
 		panic(err)
+	}
+}
+
+func LogData(data string, logFilePath string) {
+	file, err := os.OpenFile(logFilePath, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
+	if err != nil {
+		moreErr := ServerError{
+			Err:    err,
+			Code:   SERVER_ERR,
+			Simple: "Error opening the log file",
+		}
+		fmt.Println(moreErr.Error())
+	}
+	defer file.Close()
+
+	currentTime := time.Now()
+	timeString := currentTime.Format("2006-01-02 15:04:05")
+	data = timeString + " " + data + "\n"
+
+	_, err = file.WriteString(data)
+	if err != nil {
+		moreErr := ServerError{
+			Err:    err,
+			Code:   SERVER_ERR,
+			Simple: "Error logging",
+		}
+		fmt.Println(moreErr.Error())
 	}
 }
 

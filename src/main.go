@@ -20,6 +20,22 @@ func main() {
 	utils.InitDirs()
 	utils.InitVars()
 
+	// Download files; resume and such
+	if err := utils.S3_DownloadFiles(); err != nil {
+		utils.LogData(err.Error(), utils.SERVER_LOG_PATH)
+
+	} else {
+		utils.LogData("S3 Files downloaded successfully", utils.SERVER_LOG_PATH)
+	}
+
+	// Download notes data
+	if err := utils.DownloadAndWriteNoteData(); err != nil {
+		utils.LogData(err.Error(), utils.SERVER_LOG_PATH)
+
+	} else {
+		utils.LogData("S3 Notes downloaded successfully", utils.SERVER_LOG_PATH)
+	}
+
 	PORT := utils.PORT
 
 	e := echo.New()

@@ -9,8 +9,9 @@ import (
 
 func ApiGroup(group *echo.Group) {
 	group.GET("/resume", GetResume)
+	group.GET("/resume/png", GetResumePNG)
 	group.GET("/cronping", CronPing)
-	group.GET("/logs", GetLoggedData)
+	group.GET("/logs", GetServerLogs)
 	group.GET("/update", UpdateApiData)
 
 	group.GET("/chat", Chat)
@@ -84,6 +85,25 @@ func GetResume(c echo.Context) error {
 	// 	}
 	// }
 	return c.File(resumeFilePath)
+}
+
+func GetResumePNG(c echo.Context) error {
+	resumeFilePath := utils.LOCAL_RESUME_PNG_PATH
+	return c.File(resumeFilePath)
+}
+
+func GetServerLogs(c echo.Context) error {
+	pass := c.QueryParam("pass")
+
+	if utils.QUERY_GENERAL_PASS == pass {
+		return c.File(utils.SERVER_LOG_PATH)
+
+	} else {
+		return c.JSON(echo.ErrUnauthorized.Code, &utils.ErrorMessage{
+			Code:    echo.ErrUnauthorized.Code,
+			Message: "Incorrect Credentials",
+		})
+	}
 }
 
 func GetChatDebug(c echo.Context) error {
