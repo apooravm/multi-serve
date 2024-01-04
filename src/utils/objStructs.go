@@ -111,6 +111,10 @@ func InitVars() {
 			LocalFilePath:   LOCAL_RESUME_PNG_PATH,
 			BucketObjectKey: OBJ_RESUME_PNG_KEY,
 		},
+		{
+			LocalFilePath:   LOCAL_RESUME_HTML_PATH,
+			BucketObjectKey: OBJ_RESUME_HTML_KEY,
+		},
 	}
 }
 

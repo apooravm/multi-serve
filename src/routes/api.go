@@ -10,6 +10,7 @@ import (
 func ApiGroup(group *echo.Group) {
 	group.GET("/resume", GetResume)
 	group.GET("/resume/png", GetResumePNG)
+	group.GET("/resume/html", GetResumeHTML)
 	group.GET("/cronping", CronPing)
 	group.GET("/logs", GetServerLogs)
 	group.GET("/update", UpdateApiData)
@@ -89,6 +90,11 @@ func GetResume(c echo.Context) error {
 
 func GetResumePNG(c echo.Context) error {
 	resumeFilePath := utils.LOCAL_RESUME_PNG_PATH
+	return c.File(resumeFilePath)
+}
+
+func GetResumeHTML(c echo.Context) error {
+	resumeFilePath := utils.LOCAL_RESUME_HTML_PATH
 	return c.File(resumeFilePath)
 }
 

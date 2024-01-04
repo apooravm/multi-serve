@@ -11,15 +11,17 @@ var (
 	CHAT_LOG   string
 	CHAT_PASS  string
 
-	BUCKET_NAME        string
-	BUCKET_REGION      string
-	OBJ_RESUME_KEY     string
-	OBJ_RESUME_PNG_KEY string
+	BUCKET_NAME         string
+	BUCKET_REGION       string
+	OBJ_RESUME_KEY      string
+	OBJ_RESUME_PNG_KEY  string
+	OBJ_RESUME_HTML_KEY string
 
-	NOTES_DATA_FOLDER     string
-	LOCAL_INFO_PATH       string
-	LOCAL_RESUME_PATH     string
-	LOCAL_RESUME_PNG_PATH string
+	NOTES_DATA_FOLDER      string
+	LOCAL_INFO_PATH        string
+	LOCAL_RESUME_PATH      string
+	LOCAL_RESUME_PNG_PATH  string
+	LOCAL_RESUME_HTML_PATH string
 
 	QUERY_GENERAL_PASS string
 	QUERY_TRIGGER_PASS string
@@ -47,9 +49,11 @@ func InitGlobalVars() {
 
 	LOCAL_RESUME_PATH = os.Getenv("LOCAL_RESUME_PATH")
 	LOCAL_RESUME_PNG_PATH = os.Getenv("LOCAL_RESUME_PNG_PATH")
+	LOCAL_RESUME_HTML_PATH = os.Getenv("LOCAL_RESUME_HTML_PATH")
 
 	OBJ_RESUME_KEY = os.Getenv("OBJ_RESUME_KEY")
 	OBJ_RESUME_PNG_KEY = os.Getenv("OBJ_RESUME_PNG_KEY")
+	OBJ_RESUME_HTML_KEY = os.Getenv("OBJ_RESUME_HTML_KEY")
 
 	QUERY_GENERAL_PASS = os.Getenv("QUERY_GENERAL_PASS")
 
