@@ -34,7 +34,7 @@ func GetNotesMedia(c echo.Context) error {
 	if err := c.File("./data/notes/media/" + filename); err != nil {
 		return c.JSON(echo.ErrNotFound.Code, &utils.ErrorMessage{
 			Code:    echo.ErrNotFound.Code,
-			Message: "Requested file doesnt exist",
+			Message: "Requested file does not exist",
 		})
 	}
 	return nil
