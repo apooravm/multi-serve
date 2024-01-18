@@ -1,4 +1,4 @@
-http://localhost:4800/api/notes/update?pass=1234
+http://localhost:4800/api/notes/update?pass=xxxxx
 Init download all the notes data
 
 API
