@@ -1,0 +1,53 @@
+http://localhost:4800/api/notes/update?pass=1234
+Init download all the notes data
+
+API
+/api/update?pass=xxxxx
+Update the local data. eg: resume.pdf, etc.
+
+/api/resume
+Returns the resume pdf file
+
+/api/resume/png
+Returns the resume png file
+
+/api/cronping
+Endpoint to keep the server up and running
+
+/api/logs?pass=xxxxx
+Get Server Logs
+
+
+/api/notes/update?pass=xxxxx
+Updates the local markdown notes and media
+
+/api/notes/info
+Returns the Notes Rootinfo
+
+/api/notes/:slug
+Get the markdown file from the slug in rootinfo
+
+/api/notes/media/:file
+Get the media file for the markdown
+
+/api/chat
+Websocket endpoint for tchat
+
+/api/chat/logs?pass=xxxxx
+/api/chat/debug?pass=xxxxx
+Chat log history and debug logs
+
+/api/misc/stream
+Stream Video Files from Bucket (under cons)
+
+/api/misc/greet
+Get a greeting message
+
+/api/filetransfer
+Websocket endpoint for file transfers
+
+GET /api/journal/log [username, password]
+Returns the user logs
+
+POST /api/journal/log [username, pass, log-content]
+Posts a new log entry
