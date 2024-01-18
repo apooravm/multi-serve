@@ -17,7 +17,6 @@ Endpoint to keep the server up and running
 /api/logs?pass=xxxxx
 Get Server Logs
 
-
 /api/notes/update?pass=xxxxx
 Updates the local markdown notes and media
 
@@ -30,6 +29,9 @@ Get the markdown file from the slug in rootinfo
 /api/notes/media/:file
 Get the media file for the markdown
 
+POST /api/user/register [username, password, email]
+Register a new User in the DB
+
 /api/chat
 Websocket endpoint for tchat
 
@@ -38,7 +40,7 @@ Websocket endpoint for tchat
 Chat log history and debug logs
 
 /api/misc/stream
-Stream Video Files from Bucket (under cons)
+Stream Video Files from Bucket (WIP 👷‍♂️)
 
 /api/misc/greet
 Get a greeting message
