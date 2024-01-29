@@ -1,15 +1,13 @@
 FROM golang:1.21.3-alpine
 
-RUN apk add --no-cache make
-
 WORKDIR /src
 
 COPY . .
 
-RUN make install && make vendor
+RUN go mod download && go mod tidy && go mod vendor && go build -o ./bin/app.exe ./src/main.go
 
 ENV PORT=4000
 
 # EXPOSE 4000
 
-CMD ["make", "run"]
+CMD ["./bin/app.exe"]
