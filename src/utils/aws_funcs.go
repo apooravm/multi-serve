@@ -2,7 +2,6 @@ package utils
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -73,8 +72,6 @@ func DownloadAndWriteNoteData() error {
 			Message: "Failed to Fetch Objects Keys. " + err.Error(),
 		}
 	}
-
-	fmt.Println(objKeyArr)
 
 	for _, objKey := range objKeyArr {
 		file, err := DownloadFile(BUCKET_NAME, objKey, BUCKET_REGION)

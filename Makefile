@@ -75,4 +75,4 @@ run: vendor build
 
 dev: build
 	@echo "Running the binary..."
-	@${BUILD_ROUTE}
+	@${BUILD_ROUTE} dev

@@ -20,4 +20,3 @@ response = requests.request("POST", url, headers=headers, data=payload)
 
 print("Status code:", response.status_code)
 print(response.text)
-

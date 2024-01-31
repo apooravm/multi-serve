@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/apooravm/multi-serve/src/routes"
 	"github.com/apooravm/multi-serve/src/utils"
@@ -13,9 +14,13 @@ import (
 )
 
 func main() {
-	if err := godotenv.Load(); err != nil {
-		log.Printf("Error loading .env file")
+	// Read .env if "dev" passed as arg
+	if len(os.Args) != 1 && os.Args[1] != "dev" {
+		if err := godotenv.Load(); err != nil {
+			log.Printf("Error loading .env file")
+		}
 	}
+
 	utils.InitGlobalVars()
 	utils.InitDirs()
 	utils.InitVars()

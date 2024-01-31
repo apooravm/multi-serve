@@ -130,7 +130,7 @@ func PostJournalLogEntry(c echo.Context) error {
 
 	// Auth Password
 	userFromDB := userProfiles[0]
-	if userFromDB.Password != newLogReq.Password {
+	if utils.ComparePasswords(userFromDB.Password, newLogReq.Password) != nil {
 		return c.JSON(echo.ErrBadRequest.Code, utils.ClientErr("Invalid Password"))
 	}
 

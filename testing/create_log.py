@@ -7,7 +7,7 @@ log = input("Log Message: ")
 
 payload = json.dumps({
   "username": "mrBruh",
-  "password": "1234",
+  "password": "XXXX",
   "log": log
 })
 headers = {
@@ -17,4 +17,3 @@ headers = {
 response = requests.request("POST", url, headers=headers, data=payload)
 
 print(response.text)
-
