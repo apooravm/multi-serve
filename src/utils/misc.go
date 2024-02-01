@@ -32,7 +32,7 @@ func LogData(data string, logFilePath string) {
 			Code:   SERVER_ERR,
 			Simple: "Error opening the log file",
 		}
-		fmt.Println(moreErr.Error())
+		fmt.Println("misc.go ln:35 |", moreErr.Error())
 	}
 	defer file.Close()
 
@@ -47,7 +47,7 @@ func LogData(data string, logFilePath string) {
 			Code:   SERVER_ERR,
 			Simple: "Error logging",
 		}
-		fmt.Println(moreErr.Error())
+		fmt.Println("misc.go ln:50 |", moreErr.Error())
 	}
 }
 
@@ -55,7 +55,7 @@ func AppendLogToFile(data *Log, filePath string) error {
 	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE, os.ModePerm)
 
 	if err != nil {
-		fmt.Println("Failed to open log file")
+		fmt.Println("misc.go ln:58 |", "Failed to open log file")
 		return err
 	}
 
@@ -66,7 +66,7 @@ func AppendLogToFile(data *Log, filePath string) error {
 	decoder := json.NewDecoder(file)
 	if err := decoder.Decode(&logs); err != nil {
 		if err != io.EOF {
-			fmt.Println(err)
+			fmt.Println("misc.go ln:69 |", err)
 			return nil
 		}
 	}
@@ -75,21 +75,21 @@ func AppendLogToFile(data *Log, filePath string) error {
 
 	updatedJSON, err := json.MarshalIndent(logs, "", "    ")
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("misc.go ln:78 |", err)
 		return nil
 	}
 
 	if _, err := file.Seek(0, 0); err != nil {
-		fmt.Println(err)
+		fmt.Println("misc.go ln:83 |", err)
 		return nil
 	}
 	if err := file.Truncate(0); err != nil {
-		fmt.Println(err)
+		fmt.Println("misc.go ln:87 |", err)
 		return nil
 	}
 	_, err = file.Write(updatedJSON)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("misc.go ln:92 |", err)
 		return nil
 	}
 

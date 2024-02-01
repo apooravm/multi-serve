@@ -30,6 +30,6 @@ func main() {
 
 	fmt.Printf("type %T\n", val)
 	if val == nil {
-		fmt.Println("Is nil")
+		fmt.Println("test/main.go ln:33 |", "Is nil")
 	}
 }

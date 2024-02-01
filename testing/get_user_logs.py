@@ -5,18 +5,12 @@ url = "https://multi-serve.onrender.com/api/journal/"
 
 payload = json.dumps({
   "username": "mrepig",
-  "password": "XXXX",
-  "log": "nother one 😋",
-  "title": "random note",
-  "tags": [
-    "random thoughts",
-    "todo"
-  ]
+  "password": "XXXX"
 })
 headers = {
   'Content-Type': 'application/json'
 }
 
-response = requests.request("POST", url, headers=headers, data=payload)
+response = requests.request("GET", url, headers=headers, data=payload)
 
 print(response.text)

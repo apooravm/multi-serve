@@ -71,7 +71,7 @@ vendor: tidy
 
 run: vendor build
 	@echo "Running the binary..."
-	@${BUILD_ROUTE}
+	@${BUILD_ROUTE} dev
 
 dev: build
 	@echo "Running the binary..."
