@@ -3,6 +3,7 @@ package routes
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -129,7 +130,7 @@ type UpdateLogReq struct {
 }
 
 type UpdateLogReqDB struct {
-	Log   string   `json:"log"`
+	Log   string   `json:"log_message"`
 	Tags  []string `json:"tags"`
 	Title string   `json:"title"`
 }
@@ -186,6 +187,8 @@ func PostJournalLogEntry(c echo.Context) error {
 			utils.InternalServerErr("Error Marshalling"))
 	}
 
+	fmt.Println(string(logBytes))
+
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(logBytes))
 	if err != nil {
 		return c.JSON(echo.ErrInternalServerError.Code,
@@ -241,7 +244,9 @@ func UpdateJournalLog(c echo.Context) error {
 	}
 
 	// Update the log where log_id
+	// url := utils.DB_URL + "userprofile?username=eq." + username + "&select=id,username,password,email"
 	url := utils.DB_URL + "userlog?" + "log_id=eq." + strconv.Itoa(newLogReq.Log_id)
+	fmt.Println(url)
 
 	var DBReqBody UpdateLogReqDB
 	DBReqBody.Log = newLogReq.Log
@@ -255,6 +260,8 @@ func UpdateJournalLog(c echo.Context) error {
 		return c.JSON(echo.ErrInternalServerError.Code,
 			utils.InternalServerErr("Error Marshalling"))
 	}
+
+	fmt.Println(string(logBytes))
 
 	req, err := http.NewRequest("PATCH", url, bytes.NewBuffer(logBytes))
 	if err != nil {
@@ -275,6 +282,7 @@ func UpdateJournalLog(c echo.Context) error {
 	}
 
 	defer res.Body.Close()
+	fmt.Println(res.Status)
 
 	if res.StatusCode >= 200 && res.StatusCode < 300 {
 		return c.JSON(res.StatusCode, utils.SuccessMessage{

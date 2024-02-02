@@ -63,14 +63,13 @@ build:
 	@go build -o ${BUILD_ROUTE} ./src/main.go
 
 tidy:
-	@echo "Tidying up..."
+	@echo "tidying up..."
 	@go mod tidy
 
 vendor: tidy
 	@go mod vendor
 
 run: vendor build
-	@echo "Running the binary..."
 	@${BUILD_ROUTE} dev
 
 dev: build
