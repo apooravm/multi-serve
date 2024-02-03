@@ -3,7 +3,6 @@ package routes
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -17,6 +16,70 @@ func JournalLoggerGroup(group *echo.Group) {
 	group.POST("/", PostJournalLogEntry)
 	group.GET("/", GetUserLogs)
 	group.PUT("/", UpdateJournalLog)
+	group.DELETE("/", DeleteJournalLog)
+}
+
+type DeleteLogReq struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+	Log_Id   int    `json:"log_id"`
+}
+
+func DeleteJournalLog(c echo.Context) error {
+	var newLogReq DeleteLogReq
+	if err := c.Bind(&newLogReq); err != nil {
+		return c.JSON(echo.ErrInternalServerError.Code,
+			utils.InternalServerErr("Invalid Format"+err.Error()))
+	}
+
+	// Get user_id
+	userProfiles, err := getUserFromUsername(newLogReq.Username)
+	if err != nil {
+		return c.JSON(echo.ErrInternalServerError.Code,
+			utils.InternalServerErr("Error reading DB. "+err.Error()))
+	}
+
+	if len(userProfiles) == 0 {
+		return c.JSON(echo.ErrBadRequest.Code, utils.ClientErr("Invalid Credentials"))
+	}
+
+	// Auth Password
+	userFromDB := userProfiles[0]
+	if utils.ComparePasswords(userFromDB.Password, newLogReq.Password) != nil {
+		return c.JSON(echo.ErrBadRequest.Code, utils.ClientErr("Invalid Password"))
+	}
+
+	url := utils.DB_URL + "userlog?" + "log_id=eq." + strconv.Itoa(newLogReq.Log_Id)
+
+	apiKey := utils.DB_API_KEY
+
+	req, err := http.NewRequest("DELETE", url, nil)
+	if err != nil {
+		return c.JSON(echo.ErrInternalServerError.Code,
+			utils.InternalServerErr("Error Creating Request"))
+	}
+
+	req.Header.Set("apiKey", apiKey)
+	req.Header.Set("Authorization", "Bearer"+apiKey)
+
+	client := &http.Client{}
+	res, err := client.Do(req)
+	if err != nil {
+		return c.JSON(echo.ErrInternalServerError.Code,
+			utils.InternalServerErr("Error Sending Request"))
+	}
+
+	defer res.Body.Close()
+
+	if res.StatusCode >= 200 && res.StatusCode < 300 {
+		return c.JSON(res.StatusCode, utils.SuccessMessage{
+			Message: "Log Deleted Successfully",
+		})
+
+	} else {
+		return c.JSON(echo.ErrInternalServerError.Code, utils.InternalServerErr("Something went wrong. "+res.Status))
+	}
+
 }
 
 func GetJournalLogs(c echo.Context) error {
@@ -126,7 +189,7 @@ type UpdateLogReq struct {
 	Log      string   `json:"log"`
 	Tags     []string `json:"tags"`
 	Title    string   `json:"title"`
-	Log_id   int      `json:"log_id"`
+	Log_Id   int      `json:"log_id"`
 }
 
 type UpdateLogReqDB struct {
@@ -187,8 +250,6 @@ func PostJournalLogEntry(c echo.Context) error {
 			utils.InternalServerErr("Error Marshalling"))
 	}
 
-	fmt.Println(string(logBytes))
-
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(logBytes))
 	if err != nil {
 		return c.JSON(echo.ErrInternalServerError.Code,
@@ -245,8 +306,7 @@ func UpdateJournalLog(c echo.Context) error {
 
 	// Update the log where log_id
 	// url := utils.DB_URL + "userprofile?username=eq." + username + "&select=id,username,password,email"
-	url := utils.DB_URL + "userlog?" + "log_id=eq." + strconv.Itoa(newLogReq.Log_id)
-	fmt.Println(url)
+	url := utils.DB_URL + "userlog?" + "log_id=eq." + strconv.Itoa(newLogReq.Log_Id)
 
 	var DBReqBody UpdateLogReqDB
 	DBReqBody.Log = newLogReq.Log
@@ -260,8 +320,6 @@ func UpdateJournalLog(c echo.Context) error {
 		return c.JSON(echo.ErrInternalServerError.Code,
 			utils.InternalServerErr("Error Marshalling"))
 	}
-
-	fmt.Println(string(logBytes))
 
 	req, err := http.NewRequest("PATCH", url, bytes.NewBuffer(logBytes))
 	if err != nil {
@@ -282,7 +340,6 @@ func UpdateJournalLog(c echo.Context) error {
 	}
 
 	defer res.Body.Close()
-	fmt.Println(res.Status)
 
 	if res.StatusCode >= 200 && res.StatusCode < 300 {
 		return c.JSON(res.StatusCode, utils.SuccessMessage{
