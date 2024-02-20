@@ -16,12 +16,14 @@ func Chat(c echo.Context) error {
 		return err
 	}
 
-	socketInitFlag := false
+	hasBroadcastJoinedMsg := false
 	greetingFlag := false
 
 	client_id := strconv.Itoa(utils.Id_Gen.GenerateNewID())
 	var newClient utils.Client
 	newClient.Username = "undefined"
+
+	fmt.Println("New Conn!")
 
 	for {
 		var clientMessage utils.Message
@@ -29,9 +31,11 @@ func Chat(c echo.Context) error {
 			ClientDisconnect(conn, client_id, &newClient)
 			return nil
 		}
+		fmt.Println(clientMessage)
 
 		if clientMessage.Password != utils.CHAT_PASS {
-			conn.Close()
+			// conn.Close()
+			ClientDisconnect(conn, client_id, &newClient)
 			return nil
 		}
 
@@ -69,11 +73,11 @@ func Chat(c echo.Context) error {
 			BroadcastClientMessageAll(clientMessage, client_id)
 		}
 
-		if !socketInitFlag {
+		if !hasBroadcastJoinedMsg {
 			message := clientMessage.Sender + " joined!"
 			utils.LogData(message, utils.CHAT_LOG)
 			BroadcastServerMessageAll(message)
-			socketInitFlag = true
+			hasBroadcastJoinedMsg = true
 		}
 	}
 }
@@ -140,6 +144,7 @@ func BroadcastServerMessageAll(payload string) {
 // Handle Client socket disconnection
 // Graceful handling prevents error logs
 func ClientDisconnect(conn *websocket.Conn, client_id string, client *utils.Client) {
+	fmt.Println("Conn Left")
 	conn.Close()
 	// Handle disconnection or error here
 	// Delete client from the map

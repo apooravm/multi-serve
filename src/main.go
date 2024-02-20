@@ -69,10 +69,15 @@ func main() {
 	}))
 	e.Use(middleware.Recover())
 	e.Static("/", "public")
+	e.GET("/help", handleNotesRes)
 
 	DefaultGroup(e.Group(""))
 	fmt.Printf("Live on %v", PORT)
 	e.Logger.Fatal(e.Start(":" + PORT))
+}
+
+func handleNotesRes(c echo.Context) error {
+	return c.File("./notes.txt")
 }
 
 func DefaultGroup(group *echo.Group) {

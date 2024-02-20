@@ -3,6 +3,7 @@ package routes
 import (
 	"net/http"
 
+	"github.com/apooravm/multi-serve/src/routes/dummy_ws"
 	"github.com/apooravm/multi-serve/src/utils"
 	"github.com/labstack/echo/v4"
 )
@@ -18,6 +19,8 @@ func ApiGroup(group *echo.Group) {
 	group.GET("/chat", Chat)
 	group.GET("/chat/logs", GetChatLogs)
 	group.GET("/chat/debug", GetChatDebug)
+
+	group.GET("/ws/echo", dummy_ws.EchoDummyWS)
 
 	NotesGroup(group.Group("/notes"))
 	FileTransferGroup(group.Group("/filetransfer"))
