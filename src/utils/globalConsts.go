@@ -7,6 +7,8 @@ var (
 	REQUEST_LOG_PATH string
 	SERVER_LOG_PATH  string
 
+	DUMMY_WS_LOG_PATH string
+
 	CHAT_DEBUG string
 	CHAT_LOG   string
 	CHAT_PASS  string
@@ -34,6 +36,8 @@ func InitGlobalVars() {
 	PORT = os.Getenv("PORT")
 	REQUEST_LOG_PATH = os.Getenv("REQUEST_LOG_PATH")
 	SERVER_LOG_PATH = os.Getenv("SERVER_LOG_PATH")
+
+	DUMMY_WS_LOG_PATH = "./data/logs/dummy_ws.log"
 
 	CHAT_DEBUG = os.Getenv("CHAT_DEBUG")
 	CHAT_LOG = os.Getenv("CHAT_LOG")

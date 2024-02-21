@@ -7,10 +7,29 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+var (
+	UserMap            *ClientsMap   = NewClientsMap()
+	SubscribedUsersMap *ClientsMap   = NewClientsMap()
+	Id_Gen             *id_Generator = &id_Generator{
+		start_ID: 0,
+	}
+	ConnUpgrader = websocket.Upgrader{}
+)
+
+type id_Generator struct {
+	start_ID int
+}
+
+func (idGen *id_Generator) GenerateNewID() int {
+	ret_id := idGen.start_ID
+	idGen.start_ID += 1
+
+	return ret_id
+}
+
 type Client struct {
-	Id       string
-	Username string
-	Conn     *websocket.Conn
+	Id   string
+	Conn *websocket.Conn
 }
 
 type ClientsMap struct {
@@ -47,7 +66,7 @@ func (c *ClientsMap) GetClient(clientID string) (Client, bool) {
 func (c *ClientsMap) GetClientsStr() string {
 	usernameArr := []string{}
 	for _, client := range c.Clients {
-		usernameArr = append(usernameArr, client.Username)
+		usernameArr = append(usernameArr, client.Id)
 	}
 	return strings.Join(usernameArr, " | ")
 }

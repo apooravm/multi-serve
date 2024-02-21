@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"net/http"
 
 	"github.com/apooravm/multi-serve/src/utils"
 	"github.com/gorilla/websocket"
@@ -11,6 +12,7 @@ import (
 )
 
 func Chat(c echo.Context) error {
+	utils.ConnUpgrader.CheckOrigin = func(r *http.Request) bool { return true }
 	conn, err := utils.ConnUpgrader.Upgrade(c.Response(), c.Request(), nil)
 	if err != nil {
 		return err
@@ -23,15 +25,12 @@ func Chat(c echo.Context) error {
 	var newClient utils.Client
 	newClient.Username = "undefined"
 
-	fmt.Println("New Conn!")
-
 	for {
 		var clientMessage utils.Message
 		if err := conn.ReadJSON(&clientMessage); err != nil {
 			ClientDisconnect(conn, client_id, &newClient)
 			return nil
 		}
-		fmt.Println(clientMessage)
 
 		if clientMessage.Password != utils.CHAT_PASS {
 			// conn.Close()
@@ -144,7 +143,6 @@ func BroadcastServerMessageAll(payload string) {
 // Handle Client socket disconnection
 // Graceful handling prevents error logs
 func ClientDisconnect(conn *websocket.Conn, client_id string, client *utils.Client) {
-	fmt.Println("Conn Left")
 	conn.Close()
 	// Handle disconnection or error here
 	// Delete client from the map
