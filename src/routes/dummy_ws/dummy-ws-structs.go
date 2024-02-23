@@ -55,6 +55,7 @@ func (c *ClientsMap) DeleteClient(clientID string) {
 	delete(c.Clients, clientID)
 }
 
+// Returns the client if found. Else returns false
 func (c *ClientsMap) GetClient(clientID string) (Client, bool) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()

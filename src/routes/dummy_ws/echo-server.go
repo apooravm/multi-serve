@@ -23,6 +23,7 @@ func EchoDummyWS(c echo.Context) error {
 	client_id := strconv.Itoa(Id_Gen.GenerateNewID())
 	var newClient Client
 	newClient.Id = client_id
+	newClient.Conn = conn
 
 	for {
 		var clientData []byte
@@ -49,7 +50,6 @@ func broadcastToSubscribers(data string) {
 	for _, client := range SubscribedUsersMap.Clients {
 		if err := client.Conn.WriteMessage(websocket.TextMessage, []byte(data)); err != nil {
 			fmt.Println("BROAD_ALL_ERR:", err.Error())
-			// utils.LogData(err.Error(), utils.CHAT_DEBUG)
 			utils.LogData(err.Error(), utils.DUMMY_WS_LOG_PATH)
 			return
 		}
