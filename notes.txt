@@ -53,3 +53,7 @@ Returns the user logs
 
 POST /api/journal/log [username, pass, log-content]
 Posts a new log entry
+
+GET /api/ws/echo
+Dummy Websocket endpoint. More at: https://apooravm.vercel.app/echows
+

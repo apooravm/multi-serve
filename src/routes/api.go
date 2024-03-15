@@ -12,6 +12,7 @@ func ApiGroup(group *echo.Group) {
 	group.GET("/resume", GetResume)
 	group.GET("/resume/png", GetResumePNG)
 	group.GET("/resume/html", GetResumeHTML)
+	group.GET("/resume/pdf", GetResumePDF)
 	group.GET("/cronping", CronPing)
 	group.GET("/logs", GetServerLogs)
 	group.GET("/update", UpdateApiData)
@@ -48,6 +49,10 @@ func UpdateApiData(c echo.Context) error {
 	return c.JSON(http.StatusAccepted, &utils.SuccessMessage{
 		Message: "Local data updated and written successfully",
 	})
+}
+
+func GetResumePDF(c echo.Context) error {
+	return c.File(utils.LOCAL_RESUME_PATH)
 }
 
 // Initially download the file in ./data/files/resume.pdf
