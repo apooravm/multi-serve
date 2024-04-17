@@ -3,15 +3,25 @@ package routes
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
+	"strings"
+	"time"
 
 	"github.com/apooravm/multi-serve/src/utils"
+	"github.com/golang-jwt/jwt"
 	"github.com/labstack/echo/v4"
 )
 
+var jwtSecret = []byte("your_secret_key")
+
+// api/user
 func UserGroup(group *echo.Group) {
 	group.POST("/register", registerNewUser)
+	group.POST("/login", loginUser)
+	group.POST("/getinfo", getUserInfo)
+	group.POST("/verify", verifyToken, AuthJwtMiddleware)
 }
 
 // No need to check against the user table
@@ -76,4 +86,109 @@ func registerNewUser(c echo.Context) error {
 	default:
 		return c.JSON(201, &utils.SuccessMessage{Message: "Success! " + res.Status})
 	}
+}
+
+// The claims are fields that allow control over the tokens validity or scope.
+// For now using these to store basic user info
+type JwtClaims struct {
+	Email    string `json:"email"`
+	Username string `json:"username"`
+	jwt.StandardClaims
+}
+
+type UserLogin struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+func AuthJwtMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		authHeader := c.Request().Header.Get("Auth")
+		// Remove the Bearer prefix
+		tokenString := strings.Split(authHeader, " ")[1]
+
+		// Parse JWT token
+		token, err := jwt.ParseWithClaims(tokenString, &JwtClaims{}, func(t *jwt.Token) (interface{}, error) {
+			return jwtSecret, nil
+		})
+
+		// Invalid Token
+		if err != nil {
+			return echo.NewHTTPError(http.StatusUnauthorized, "Invalid Token")
+		}
+
+		// Valid Token
+		if claims, ok := token.Claims.(*JwtClaims); ok && token.Valid {
+			c.Set("user", claims)
+			return next(c)
+		}
+
+		return echo.NewHTTPError(http.StatusUnauthorized, "Invalid Token")
+	}
+}
+
+func verifyToken(c echo.Context) error {
+	user := c.Get("user").(*JwtClaims)
+	return c.String(200, fmt.Sprintf("Hello %s", user.Username))
+}
+
+func loginUser(c echo.Context) error {
+	var newLogReq UpdateLogReq
+	if err := c.Bind(&newLogReq); err != nil {
+		return c.JSON(echo.ErrInternalServerError.Code,
+			utils.InternalServerErr("Invalid Format"+err.Error()))
+	}
+
+	// Get user_id
+	userProfiles, err := utils.GetUserFromEmail(newLogReq.Email)
+	if err != nil {
+		return c.JSON(echo.ErrInternalServerError.Code,
+			utils.InternalServerErr("Error reading DB. "+err.Error()))
+	}
+
+	if len(userProfiles) == 0 {
+		return c.JSON(echo.ErrBadRequest.Code, utils.ClientErr("Invalid Credentials"))
+	}
+
+	// Auth Password
+	userFromDB := userProfiles[0]
+	if utils.ComparePasswords(userFromDB.Password, newLogReq.Password) != nil {
+		return c.JSON(echo.ErrBadRequest.Code, utils.ClientErr("Invalid Password"))
+	}
+
+	// JWT Token gen
+	token := jwt.New(jwt.SigningMethodHS256)
+	claims := &JwtClaims{
+		Email:    userFromDB.Email,
+		Username: userFromDB.Username,
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: time.Now().Add(time.Hour * 24).Unix(),
+		},
+	}
+
+	token.Claims = claims
+	t, err := token.SignedString(jwtSecret)
+	if err != nil {
+		return c.JSON(echo.ErrInternalServerError.Code, utils.InternalServerErr("Something went wrong"+err.Error()))
+	}
+
+	return c.JSON(200, map[string]string{
+		"token": t,
+	})
+}
+
+type User2 struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+	Id       string `json:"id"`
+}
+
+func getUserInfo(c echo.Context) error {
+	var newLogReq User2
+	if err := c.Bind(&newLogReq); err != nil {
+		return c.JSON(echo.ErrInternalServerError.Code,
+			utils.InternalServerErr("Invalid Format"+err.Error()))
+	}
+
+	return c.JSON(200, &newLogReq)
 }

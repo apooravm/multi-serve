@@ -30,7 +30,7 @@ func GetJournalLogs(c echo.Context) error {
 	}
 
 	// Get user_id
-	userProfiles, err := getUserFromUsername(newLogReq.Username)
+	userProfiles, err := utils.GetUserFromEmail(newLogReq.Username)
 	if err != nil {
 		return c.JSON(echo.ErrInternalServerError.Code,
 			utils.InternalServerErr("DB Error. "+err.Error()))
@@ -87,14 +87,14 @@ func GetJournalLogs(c echo.Context) error {
 
 	} else {
 		return c.JSON(echo.ErrInternalServerError.Code,
-			utils.InternalServerErr("Something went wrong"+err.Error()))
+			utils.InternalServerErr("Something went wrong"))
 	}
 
 	return c.JSON(200, &resLog)
 }
 
 type UserAuthField struct {
-	Username string `json:"username"`
+	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 
@@ -104,6 +104,20 @@ type UserLogRes struct {
 	Title      string   `json:"title"`
 	Tags       []string `json:"tags"`
 	Log_Id     int      `json:"log_id"`
+}
+
+type UserCredentials struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+	Email    string `json:"email"`
+}
+
+type LogInfo struct {
+	Log     string   `json:"log"`
+	Title   string   `json:"title"`
+	Tags    []string `json:"tags"`
+	User_id int      `json:"user_id"`
+	Log_Id  int      `json:"log_id"`
 }
 
 type ClientUserLogReq struct {
@@ -122,6 +136,7 @@ type NewUserLogCreate struct {
 }
 
 type UpdateLogReq struct {
+	Email    string   `json:"email"`
 	Username string   `json:"username"`
 	Password string   `json:"password"`
 	Log      string   `json:"log"`
@@ -144,7 +159,7 @@ func PostJournalLogEntry(c echo.Context) error {
 	}
 
 	// Get user_id
-	userProfiles, err := getUserFromUsername(newLogReq.Username)
+	userProfiles, err := utils.GetUserFromEmail(newLogReq.Username)
 	if err != nil {
 		return c.JSON(echo.ErrInternalServerError.Code,
 			utils.InternalServerErr("Error reading DB. "+err.Error()))
@@ -226,7 +241,7 @@ func UpdateJournalLog(c echo.Context) error {
 	}
 
 	// Get user_id
-	userProfiles, err := getUserFromUsername(newLogReq.Username)
+	userProfiles, err := utils.GetUserFromEmail(newLogReq.Username)
 	if err != nil {
 		return c.JSON(echo.ErrInternalServerError.Code,
 			utils.InternalServerErr("Error reading DB. "+err.Error()))
@@ -289,60 +304,6 @@ func UpdateJournalLog(c echo.Context) error {
 
 }
 
-func getUserFromUsername(username string) ([]utils.UserProfile, error) {
-	url := utils.DB_URL + "userprofile?username=eq." + username + "&select=id,username,password,email"
-	apiKey := utils.DB_API_KEY
-
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return []utils.UserProfile{}, &utils.ServerError{
-			Err:    err,
-			Code:   500,
-			Simple: "Error Creating Request",
-		}
-	}
-
-	req.Header.Set("apiKey", apiKey)
-	req.Header.Set("Authorization", "Bearer"+apiKey)
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Prefer", "return=minimal")
-
-	// Create an http client and send req
-	client := &http.Client{}
-
-	res, err := client.Do(req)
-	if err != nil {
-		return []utils.UserProfile{}, &utils.ServerError{
-			Err:    err,
-			Code:   500,
-			Simple: "Error Sending Request",
-		}
-	}
-
-	defer res.Body.Close()
-
-	var userProfiles []utils.UserProfile
-
-	if res.StatusCode >= 200 && res.StatusCode < 300 {
-		if err := json.NewDecoder(res.Body).Decode(&userProfiles); err != nil {
-			return []utils.UserProfile{}, &utils.ServerError{
-				Err:    err,
-				Code:   500,
-				Simple: "Error Sending Request",
-			}
-		}
-
-	} else {
-		return []utils.UserProfile{}, &utils.ServerError{
-			Err:    err,
-			Code:   500,
-			Simple: "Something went wrong. " + res.Status,
-		}
-	}
-
-	return userProfiles, nil
-}
-
 func GetUserLogs(c echo.Context) error {
 	var newLogReq UserAuthField
 	if err := c.Bind(&newLogReq); err != nil {
@@ -351,7 +312,7 @@ func GetUserLogs(c echo.Context) error {
 	}
 
 	// Get user_id
-	userProfiles, err := getUserFromUsername(newLogReq.Username)
+	userProfiles, err := utils.GetUserFromEmail(newLogReq.Email)
 	if err != nil {
 		return c.JSON(echo.ErrInternalServerError.Code,
 			utils.InternalServerErr("Error reading DB. "+err.Error()))
@@ -361,7 +322,12 @@ func GetUserLogs(c echo.Context) error {
 		return c.JSON(echo.ErrBadRequest.Code, utils.ClientErr("Invalid Credentials"))
 	}
 
+	// Auth Password
 	userFromDB := userProfiles[0]
+	if utils.ComparePasswords(userFromDB.Password, newLogReq.Password) != nil {
+		return c.JSON(echo.ErrBadRequest.Code, utils.ClientErr("Invalid Password"))
+	}
+
 	url := utils.DB_URL + "userlog?user_id=eq." + strconv.Itoa(userFromDB.Id) + "&select=created_at,log_id,log_message,title,tags"
 	apiKey := utils.DB_API_KEY
 
@@ -400,7 +366,7 @@ func GetUserLogs(c echo.Context) error {
 }
 
 type DeleteLogReq struct {
-	Username string `json:"username"`
+	Email    string `json:"email"`
 	Password string `json:"password"`
 	Log_Id   int    `json:"log_id"`
 }
@@ -413,7 +379,7 @@ func DeleteJournalLog(c echo.Context) error {
 	}
 
 	// Get user_id
-	userProfiles, err := getUserFromUsername(newLogReq.Username)
+	userProfiles, err := utils.GetUserFromEmail(newLogReq.Email)
 	if err != nil {
 		return c.JSON(echo.ErrInternalServerError.Code,
 			utils.InternalServerErr("Error reading DB. "+err.Error()))
