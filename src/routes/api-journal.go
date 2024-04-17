@@ -13,11 +13,11 @@ import (
 
 // /api/journal
 func JournalLoggerGroup(group *echo.Group) {
-	group.GET("/log", GetJournalLogs)
-	group.POST("/", PostJournalLogEntry)
-	group.GET("/", GetUserLogs)
-	group.PUT("/", UpdateJournalLog)
-	group.DELETE("/", DeleteJournalLog)
+	group.GET("/log", GetJournalLogs, AuthJwtMiddleware)
+	group.POST("/", PostJournalLogEntry, AuthJwtMiddleware)
+	group.GET("/", GetUserLogs, AuthJwtMiddleware)
+	group.PUT("/", UpdateJournalLog, AuthJwtMiddleware)
+	group.DELETE("/", DeleteJournalLog, AuthJwtMiddleware)
 }
 
 func GetJournalLogs(c echo.Context) error {

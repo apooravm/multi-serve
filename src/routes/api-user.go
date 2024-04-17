@@ -24,6 +24,12 @@ func UserGroup(group *echo.Group) {
 	group.POST("/verify", verifyToken, AuthJwtMiddleware)
 }
 
+// User flow
+// Sign Up/Register at https://apooravm.vercel.app/register
+// Login through browser or CLI apps and receive a jwt
+// Store it and attach it to the Header as `Auth: "Bearer <token>"`
+// Verified for each required route
+
 // No need to check against the user table
 // If conflict, return it back
 func registerNewUser(c echo.Context) error {
