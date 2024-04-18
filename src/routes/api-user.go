@@ -99,6 +99,7 @@ func registerNewUser(c echo.Context) error {
 type JwtClaims struct {
 	Email    string `json:"email"`
 	Username string `json:"username"`
+	Id int `json:"id"`
 	jwt.StandardClaims
 }
 
@@ -138,8 +139,13 @@ func verifyToken(c echo.Context) error {
 	return c.String(200, fmt.Sprintf("Hello %s", user.Username))
 }
 
+type UserAuth struct {
+	Email string `json:"email"`
+	Password string `json:"password"`
+}
+
 func loginUser(c echo.Context) error {
-	var newLogReq UpdateLogReq
+	var newLogReq UserAuth
 	if err := c.Bind(&newLogReq); err != nil {
 		return c.JSON(echo.ErrInternalServerError.Code,
 			utils.InternalServerErr("Invalid Format"+err.Error()))
@@ -167,6 +173,7 @@ func loginUser(c echo.Context) error {
 	claims := &JwtClaims{
 		Email:    userFromDB.Email,
 		Username: userFromDB.Username,
+		Id: userFromDB.Id,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: time.Now().Add(time.Hour * 24).Unix(),
 		},
@@ -179,7 +186,8 @@ func loginUser(c echo.Context) error {
 	}
 
 	return c.JSON(200, map[string]string{
-		"token": t,
+		"token": "Bearer "+t,
+		"username": userFromDB.Username,
 	})
 }
 

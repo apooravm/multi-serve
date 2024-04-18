@@ -13,84 +13,10 @@ import (
 
 // /api/journal
 func JournalLoggerGroup(group *echo.Group) {
-	group.GET("/log", GetJournalLogs, AuthJwtMiddleware)
 	group.POST("/", PostJournalLogEntry, AuthJwtMiddleware)
 	group.GET("/", GetUserLogs, AuthJwtMiddleware)
 	group.PUT("/", UpdateJournalLog, AuthJwtMiddleware)
 	group.DELETE("/", DeleteJournalLog, AuthJwtMiddleware)
-}
-
-func GetJournalLogs(c echo.Context) error {
-	limit := c.QueryParam("limit")
-
-	var newLogReq ClientUserLogReq
-	if err := c.Bind(&newLogReq); err != nil {
-		return c.JSON(echo.ErrInternalServerError.Code,
-			utils.InternalServerErr("Invalid Credential Format"+err.Error()))
-	}
-
-	// Get user_id
-	userProfiles, err := utils.GetUserFromEmail(newLogReq.Username)
-	if err != nil {
-		return c.JSON(echo.ErrInternalServerError.Code,
-			utils.InternalServerErr("DB Error. "+err.Error()))
-	}
-
-	if len(userProfiles) == 0 {
-		return c.JSON(echo.ErrBadRequest.Code, utils.ClientErr("Invalid Credentials"))
-	}
-
-	// Auth Password
-	userFromDB := userProfiles[0]
-	if userFromDB.Password != newLogReq.Password {
-		return c.JSON(echo.ErrBadRequest.Code, utils.ClientErr("Invalid Password"))
-	}
-
-	url := utils.DB_URL + "userlog?select=created_at,log_message"
-	apiKey := utils.DB_API_KEY
-
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return c.JSON(echo.ErrInternalServerError.Code,
-			utils.InternalServerErr("Error Creating Request"))
-	}
-
-	req.Header.Set("apiKey", apiKey)
-	req.Header.Set("Authorization", "Bearer"+apiKey)
-	req.Header.Set("Content-Type", "application/json")
-
-	limitInt, err := strconv.Atoi(limit)
-	if err != nil {
-		return c.JSON(echo.ErrBadRequest.Code, utils.ClientErr("Invalid Limit"))
-	}
-
-	if len(limit) != 0 && limitInt > -1 {
-		req.Header.Set("Range", "0-"+strconv.Itoa(limitInt-1))
-	}
-
-	client := &http.Client{}
-	res, err := client.Do(req)
-	if err != nil {
-		return c.JSON(echo.ErrInternalServerError.Code,
-			utils.InternalServerErr("Error Sending Request. "+err.Error()))
-	}
-
-	defer res.Body.Close()
-
-	var resLog []UserLogRes
-
-	if res.StatusCode >= 200 && res.StatusCode < 300 {
-		if err := json.NewDecoder(res.Body).Decode(&resLog); err != nil {
-			return c.JSON(echo.ErrInternalServerError.Code,
-				utils.InternalServerErr("Error Unmarshalling Request"+err.Error()))
-		}
-
-	} else {
-		return c.JSON(echo.ErrInternalServerError.Code,
-			utils.InternalServerErr("Something went wrong"))
-	}
-
-	return c.JSON(200, &resLog)
 }
 
 type UserAuthField struct {
@@ -106,12 +32,6 @@ type UserLogRes struct {
 	Log_Id     int      `json:"log_id"`
 }
 
-type UserCredentials struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-	Email    string `json:"email"`
-}
-
 type LogInfo struct {
 	Log     string   `json:"log"`
 	Title   string   `json:"title"`
@@ -121,8 +41,6 @@ type LogInfo struct {
 }
 
 type ClientUserLogReq struct {
-	Username string   `json:"username"`
-	Password string   `json:"password"`
 	Log      string   `json:"log"`
 	Tags     []string `json:"tags"`
 	Title    string   `json:"title"`
@@ -136,9 +54,6 @@ type NewUserLogCreate struct {
 }
 
 type UpdateLogReq struct {
-	Email    string   `json:"email"`
-	Username string   `json:"username"`
-	Password string   `json:"password"`
 	Log      string   `json:"log"`
 	Tags     []string `json:"tags"`
 	Title    string   `json:"title"`
@@ -153,26 +68,11 @@ type UpdateLogReqDB struct {
 
 func PostJournalLogEntry(c echo.Context) error {
 	var newLogReq ClientUserLogReq
+	user := c.Get("user").(*JwtClaims)
+
 	if err := c.Bind(&newLogReq); err != nil {
 		return c.JSON(echo.ErrInternalServerError.Code,
 			utils.InternalServerErr("Invalid Format"+err.Error()))
-	}
-
-	// Get user_id
-	userProfiles, err := utils.GetUserFromEmail(newLogReq.Username)
-	if err != nil {
-		return c.JSON(echo.ErrInternalServerError.Code,
-			utils.InternalServerErr("Error reading DB. "+err.Error()))
-	}
-
-	if len(userProfiles) == 0 {
-		return c.JSON(echo.ErrBadRequest.Code, utils.ClientErr("Invalid Credentials"))
-	}
-
-	// Auth Password
-	userFromDB := userProfiles[0]
-	if utils.ComparePasswords(userFromDB.Password, newLogReq.Password) != nil {
-		return c.JSON(echo.ErrBadRequest.Code, utils.ClientErr("Invalid Password"))
 	}
 
 	if len(newLogReq.Log) == 0 {
@@ -188,7 +88,7 @@ func PostJournalLogEntry(c echo.Context) error {
 	}
 
 	newLog := NewUserLogCreate{
-		User_id: userFromDB.Id,
+		User_id: user.Id,
 		Log:     newLogReq.Log,
 		Tags:    newLogReq.Tags,
 		Title:   newLogReq.Title,
@@ -235,31 +135,15 @@ func PostJournalLogEntry(c echo.Context) error {
 
 func UpdateJournalLog(c echo.Context) error {
 	var newLogReq UpdateLogReq
+	user := c.Get("user").(*JwtClaims)
+
 	if err := c.Bind(&newLogReq); err != nil {
 		return c.JSON(echo.ErrInternalServerError.Code,
 			utils.InternalServerErr("Invalid Format"+err.Error()))
 	}
 
-	// Get user_id
-	userProfiles, err := utils.GetUserFromEmail(newLogReq.Username)
-	if err != nil {
-		return c.JSON(echo.ErrInternalServerError.Code,
-			utils.InternalServerErr("Error reading DB. "+err.Error()))
-	}
-
-	if len(userProfiles) == 0 {
-		return c.JSON(echo.ErrBadRequest.Code, utils.ClientErr("Invalid Credentials"))
-	}
-
-	// Auth Password
-	userFromDB := userProfiles[0]
-	if utils.ComparePasswords(userFromDB.Password, newLogReq.Password) != nil {
-		return c.JSON(echo.ErrBadRequest.Code, utils.ClientErr("Invalid Password"))
-	}
-
 	// Update the log where log_id
-	// url := utils.DB_URL + "userprofile?username=eq." + username + "&select=id,username,password,email"
-	url := utils.DB_URL + "userlog?" + "log_id=eq." + strconv.Itoa(newLogReq.Log_Id) + "&user_id=eq." + strconv.Itoa(userFromDB.Id)
+	url := utils.DB_URL + "userlog?" + "log_id=eq." + strconv.Itoa(newLogReq.Log_Id) + "&user_id=eq." + strconv.Itoa(user.Id)
 	apiKey := utils.DB_API_KEY
 
 	var DBReqBody UpdateLogReqDB
@@ -305,30 +189,10 @@ func UpdateJournalLog(c echo.Context) error {
 }
 
 func GetUserLogs(c echo.Context) error {
-	var newLogReq UserAuthField
-	if err := c.Bind(&newLogReq); err != nil {
-		return c.JSON(echo.ErrInternalServerError.Code,
-			utils.InternalServerErr("Invalid Format"+err.Error()))
-	}
+	// var newLogReq UserAuthField
+	user := c.Get("user").(*JwtClaims)
 
-	// Get user_id
-	userProfiles, err := utils.GetUserFromEmail(newLogReq.Email)
-	if err != nil {
-		return c.JSON(echo.ErrInternalServerError.Code,
-			utils.InternalServerErr("Error reading DB. "+err.Error()))
-	}
-
-	if len(userProfiles) == 0 {
-		return c.JSON(echo.ErrBadRequest.Code, utils.ClientErr("Invalid Credentials"))
-	}
-
-	// Auth Password
-	userFromDB := userProfiles[0]
-	if utils.ComparePasswords(userFromDB.Password, newLogReq.Password) != nil {
-		return c.JSON(echo.ErrBadRequest.Code, utils.ClientErr("Invalid Password"))
-	}
-
-	url := utils.DB_URL + "userlog?user_id=eq." + strconv.Itoa(userFromDB.Id) + "&select=created_at,log_id,log_message,title,tags"
+	url := utils.DB_URL + "userlog?user_id=eq." + strconv.Itoa(user.Id) + "&select=created_at,log_id,log_message,title,tags"
 	apiKey := utils.DB_API_KEY
 
 	req, err := http.NewRequest("GET", url, nil)
@@ -366,36 +230,19 @@ func GetUserLogs(c echo.Context) error {
 }
 
 type DeleteLogReq struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
 	Log_Id   int    `json:"log_id"`
 }
 
 func DeleteJournalLog(c echo.Context) error {
 	var newLogReq DeleteLogReq
+	user := c.Get("user").(*JwtClaims)
+
 	if err := c.Bind(&newLogReq); err != nil {
 		return c.JSON(echo.ErrInternalServerError.Code,
 			utils.InternalServerErr("Invalid Format"+err.Error()))
 	}
 
-	// Get user_id
-	userProfiles, err := utils.GetUserFromEmail(newLogReq.Email)
-	if err != nil {
-		return c.JSON(echo.ErrInternalServerError.Code,
-			utils.InternalServerErr("Error reading DB. "+err.Error()))
-	}
-
-	if len(userProfiles) == 0 {
-		return c.JSON(echo.ErrBadRequest.Code, utils.ClientErr("Invalid Credentials"))
-	}
-
-	// Auth Password
-	userFromDB := userProfiles[0]
-	if utils.ComparePasswords(userFromDB.Password, newLogReq.Password) != nil {
-		return c.JSON(echo.ErrBadRequest.Code, utils.ClientErr("Invalid Password"))
-	}
-
-	url := utils.DB_URL + "userlog?" + "log_id=eq." + strconv.Itoa(newLogReq.Log_Id) + "&user_id=eq." + strconv.Itoa(userFromDB.Id)
+	url := utils.DB_URL + "userlog?" + "log_id=eq." + strconv.Itoa(newLogReq.Log_Id) + "&user_id=eq." + strconv.Itoa(user.Id)
 	apiKey := utils.DB_API_KEY
 
 	req, err := http.NewRequest("DELETE", url, nil)
