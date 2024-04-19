@@ -121,7 +121,7 @@ func AuthJwtMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 
 		// Invalid Token
 		if err != nil {
-			return echo.NewHTTPError(http.StatusUnauthorized, "Invalid Token")
+			return echo.NewHTTPError(http.StatusUnauthorized, err.Error())
 		}
 
 		// Valid Token
