@@ -11,7 +11,7 @@ Returns the resume pdf file
 /api/resume/png
 Returns the resume png file
 
-/api/cronping
+/api/ping
 Endpoint to keep the server up and running
 
 /api/logs?pass=xxxxx

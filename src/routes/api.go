@@ -13,7 +13,7 @@ func ApiGroup(group *echo.Group) {
 	group.GET("/resume/png", GetResumePNG)
 	group.GET("/resume/html", GetResumeHTML)
 	group.GET("/resume/pdf", GetResumePDF)
-	group.GET("/cronping", CronPing)
+	group.GET("/ping", PingServer)
 	group.GET("/logs", GetServerLogs)
 	group.GET("/update", UpdateApiData)
 
@@ -144,7 +144,7 @@ func GetChatLogs(c echo.Context) error {
 	}
 }
 
-func CronPing(c echo.Context) error {
+func PingServer(c echo.Context) error {
 	return c.String(http.StatusOK, "sup")
 }
 
