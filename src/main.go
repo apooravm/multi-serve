@@ -82,7 +82,7 @@ func main() {
 }
 
 func handleNotesRes(c echo.Context) error {
-	return c.File("./routeshelp.txt")
+	return c.File("./routehelp.txt")
 }
 
 func DefaultGroup(group *echo.Group) {
