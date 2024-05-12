@@ -73,5 +73,4 @@ run: vendor build
 	@${BUILD_ROUTE} dev
 
 dev: build
-	@echo "Running the binary..."
 	@${BUILD_ROUTE} dev

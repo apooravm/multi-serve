@@ -30,6 +30,8 @@ var (
 
 	DB_URL     string
 	DB_API_KEY string
+
+	CLIPBOARD_PATH string
 )
 
 func InitGlobalVars() {
@@ -63,5 +65,7 @@ func InitGlobalVars() {
 
 	DB_URL = os.Getenv("DB_URL")
 	DB_API_KEY = os.Getenv("DB_KEY")
+
+	CLIPBOARD_PATH = "./data/WebClipboard.json"
 
 }

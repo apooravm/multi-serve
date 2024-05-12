@@ -25,6 +25,7 @@ func main() {
 	utils.InitGlobalVars()
 	utils.InitDirs()
 	utils.InitVars()
+	utils.InitFiles()
 
 	// Download files; resume and such
 	if err := utils.S3_DownloadFiles(); err != nil {
@@ -82,7 +83,7 @@ func main() {
 }
 
 func handleNotesRes(c echo.Context) error {
-	return c.File("./routehelp.txt")
+	return c.File("./helper.txt")
 }
 
 func DefaultGroup(group *echo.Group) {

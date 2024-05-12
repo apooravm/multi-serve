@@ -28,6 +28,7 @@ func ApiGroup(group *echo.Group) {
 	MiscGroup(group.Group("/misc"))
 	JournalLoggerGroup(group.Group(("/journal")))
 	UserGroup(group.Group("/user"))
+	WebClipboardGroup(group.Group("/clipboard"))
 }
 
 // Refreshes the local server Data

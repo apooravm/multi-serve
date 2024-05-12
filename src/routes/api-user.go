@@ -99,7 +99,7 @@ func registerNewUser(c echo.Context) error {
 type JwtClaims struct {
 	Email    string `json:"email"`
 	Username string `json:"username"`
-	Id int `json:"id"`
+	Id       int    `json:"id"`
 	jwt.StandardClaims
 }
 
@@ -140,7 +140,7 @@ func verifyToken(c echo.Context) error {
 }
 
 type UserAuth struct {
-	Email string `json:"email"`
+	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 
@@ -154,8 +154,9 @@ func loginUser(c echo.Context) error {
 	// Get user_id
 	userProfiles, err := utils.GetUserFromEmail(newLogReq.Email)
 	if err != nil {
+		fmt.Println(err.Error())
 		return c.JSON(echo.ErrInternalServerError.Code,
-			utils.InternalServerErr("Error reading DB. "+err.Error()))
+			utils.InternalServerErr(err.Error()))
 	}
 
 	if len(userProfiles) == 0 {
@@ -173,7 +174,7 @@ func loginUser(c echo.Context) error {
 	claims := &JwtClaims{
 		Email:    userFromDB.Email,
 		Username: userFromDB.Username,
-		Id: userFromDB.Id,
+		Id:       userFromDB.Id,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: time.Now().Add(time.Hour * 24).Unix(),
 		},
@@ -186,7 +187,7 @@ func loginUser(c echo.Context) error {
 	}
 
 	return c.JSON(200, map[string]string{
-		"token": "Bearer "+t,
+		"token":    "Bearer " + t,
 		"username": userFromDB.Username,
 	})
 }

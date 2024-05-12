@@ -41,9 +41,9 @@ type LogInfo struct {
 }
 
 type ClientUserLogReq struct {
-	Log      string   `json:"log"`
-	Tags     []string `json:"tags"`
-	Title    string   `json:"title"`
+	Log   string   `json:"log"`
+	Tags  []string `json:"tags"`
+	Title string   `json:"title"`
 }
 
 type NewUserLogCreate struct {
@@ -54,10 +54,10 @@ type NewUserLogCreate struct {
 }
 
 type UpdateLogReq struct {
-	Log      string   `json:"log"`
-	Tags     []string `json:"tags"`
-	Title    string   `json:"title"`
-	Log_Id   int      `json:"log_id"`
+	Log    string   `json:"log"`
+	Tags   []string `json:"tags"`
+	Title  string   `json:"title"`
+	Log_Id int      `json:"log_id"`
 }
 
 type UpdateLogReqDB struct {
@@ -230,7 +230,7 @@ func GetUserLogs(c echo.Context) error {
 }
 
 type DeleteLogReq struct {
-	Log_Id   int    `json:"log_id"`
+	Log_Id int `json:"log_id"`
 }
 
 func DeleteJournalLog(c echo.Context) error {

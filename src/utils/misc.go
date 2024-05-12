@@ -24,6 +24,7 @@ func InitDirs() {
 	}
 }
 
+// Logs Data into log file. If file doesnt exist, it is created.
 func LogData(data string, logFilePath string) {
 	file, err := os.OpenFile(logFilePath, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
 	if err != nil {
@@ -48,6 +49,7 @@ func LogData(data string, logFilePath string) {
 			Simple: "Error logging",
 		}
 		fmt.Println("misc.go ln:50 |", moreErr.Error())
+		fmt.Println("Data that was being logged:", data)
 	}
 }
 
@@ -141,5 +143,32 @@ func ClientErr(messageStr string) ErrorMessage {
 	return ErrorMessage{
 		Code:    echo.ErrBadRequest.Code,
 		Message: messageStr,
+	}
+}
+
+
+func CreateWebClipboardFile() error {
+	file, err := os.Create(CLIPBOARD_PATH)
+	if err != nil {
+		return fmt.Errorf("error creating webClipboard file. %s", err.Error())
+	}
+
+	clipboardInit := make([]string, 0)
+	clipboardData, err := json.MarshalIndent(&clipboardInit, "", "    ")
+	if err != nil {
+		return fmt.Errorf("error marshaling initial clipboard data. %s", err.Error())
+	}
+
+	_, err = file.Write(clipboardData)
+	if err != nil {
+		return fmt.Errorf("error writing to clipboard file. %s", err.Error())
+	}
+
+	return nil
+}
+
+func InitFiles() {
+	if err := CreateWebClipboardFile(); err != nil {
+		LogData(err.Error(), SERVER_LOG_PATH)
 	}
 }

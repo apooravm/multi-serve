@@ -24,6 +24,7 @@ func ComparePasswords(hashedPassword string, enteredPassword string) error {
 // Returns user array given the email.
 // If the provided email not in the db, returns an empty array.
 // This allows to check whether the user exists or no.
+// Remember to account for offline db server.
 func GetUserFromEmail(email string) ([]UserProfile, error) {
 	url := DB_URL + "userprofile?email=eq." + email + "&select=id,username,password,email"
 	apiKey := DB_API_KEY
@@ -46,11 +47,14 @@ func GetUserFromEmail(email string) ([]UserProfile, error) {
 	client := &http.Client{}
 
 	res, err := client.Do(req)
+	// DB server is offline. Thus need to send special message.
+	// Or maybe some issue with my own connection.
+	// Not checking that for now.
 	if err != nil {
 		return []UserProfile{}, &ServerError{
 			Err:    err,
 			Code:   500,
-			Simple: "Error Sending Request",
+			Simple: "DB Server is offline. Try again later.",
 		}
 	}
 
