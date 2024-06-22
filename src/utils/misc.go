@@ -33,7 +33,7 @@ func LogData(data string, logFilePath string) {
 			Code:   SERVER_ERR,
 			Simple: "Error opening the log file",
 		}
-		fmt.Println("misc.go ln:35 |", moreErr.Error())
+		fmt.Println("misc.go ln:36 |", moreErr.Error())
 	}
 	defer file.Close()
 
@@ -48,7 +48,7 @@ func LogData(data string, logFilePath string) {
 			Code:   SERVER_ERR,
 			Simple: "Error logging",
 		}
-		fmt.Println("misc.go ln:50 |", moreErr.Error())
+		fmt.Println("misc.go ln:51 |", moreErr.Error())
 		fmt.Println("Data that was being logged:", data)
 	}
 }
@@ -145,7 +145,6 @@ func ClientErr(messageStr string) ErrorMessage {
 		Message: messageStr,
 	}
 }
-
 
 func CreateWebClipboardFile() error {
 	file, err := os.Create(CLIPBOARD_PATH)
