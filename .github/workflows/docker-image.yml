@@ -27,7 +27,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           push: true
-          tags: user/app:latest
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/multi_serve:latest
 
   # build:
   #
@@ -36,4 +36,4 @@ jobs:
   #   steps:
   #   - uses: actions/checkout@v4
   #   - name: Build the Docker image
-  #     run: docker build . --file Dockerfile --tag apooravm/multi_serve:0.2.9
+  #     run: docker build . --file Dockerfile --tag user/multi_serve:0.2.9
