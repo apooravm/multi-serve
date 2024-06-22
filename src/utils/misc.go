@@ -4,12 +4,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/labstack/echo/v4"
 )
 
+// Check if a file exists at the given filepath.
 func FileExists(filePath string) bool {
 	_, err := os.Stat(filePath)
 	return !os.IsNotExist(err)
@@ -20,44 +23,44 @@ func InitDirs() {
 	createDirPath := "./data/logs"
 	err := os.MkdirAll(createDirPath, os.ModePerm)
 	if err != nil {
-		panic(err)
+		LogData("misc.go err_id:001 | Directories could not be initialized", err.Error())
 	}
 }
 
-// Logs Data into log file. If file doesnt exist, it is created.
-func LogData(data string, logFilePath string) {
+// Log text data to a give filepath. If the file doesnt exist, it is created.
+// Variadic function that can take any number of data.
+func LogDataToPath(logFilePath string, data ...string) {
+	dataJoined := strings.Join(data, " ")
+
 	file, err := os.OpenFile(logFilePath, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
 	if err != nil {
-		moreErr := ServerError{
-			Err:    err,
-			Code:   SERVER_ERR,
-			Simple: "Error opening the log file",
-		}
-		fmt.Println("misc.go ln:36 |", moreErr.Error())
+		log.Println("misc.go err_id:002 |", err.Error())
 	}
 	defer file.Close()
 
 	currentTime := time.Now()
 	timeString := currentTime.Format("2006-01-02 15:04:05")
-	data = timeString + " " + data + "\n"
+	dataJoined = timeString + " " + dataJoined + "\n"
 
-	_, err = file.WriteString(data)
+	_, err = file.WriteString(dataJoined)
 	if err != nil {
-		moreErr := ServerError{
-			Err:    err,
-			Code:   SERVER_ERR,
-			Simple: "Error logging",
-		}
-		fmt.Println("misc.go ln:51 |", moreErr.Error())
-		fmt.Println("Data that was being logged:", data)
+		log.Println("misc.go err_id:003 |", err.Error())
+		log.Println("Data that was being logged:", data)
 	}
 }
 
+// Log data to the default file
+func LogData(data ...string) {
+	LogDataToPath(SERVER_LOG_PATH, data...)
+}
+
+// Difference between this and LogData is that this logs to a given file, while the other has a default filepath.
+// Actually nvm idk
 func AppendLogToFile(data *Log, filePath string) error {
 	file, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE, os.ModePerm)
 
 	if err != nil {
-		fmt.Println("misc.go ln:58 |", "Failed to open log file")
+		LogData("misc.go err_id:004 | failed to open file", err.Error())
 		return err
 	}
 
@@ -68,7 +71,7 @@ func AppendLogToFile(data *Log, filePath string) error {
 	decoder := json.NewDecoder(file)
 	if err := decoder.Decode(&logs); err != nil {
 		if err != io.EOF {
-			fmt.Println("misc.go ln:69 |", err)
+			LogData("misc.go err_id:006 |", err.Error())
 			return nil
 		}
 	}
@@ -77,21 +80,21 @@ func AppendLogToFile(data *Log, filePath string) error {
 
 	updatedJSON, err := json.MarshalIndent(logs, "", "    ")
 	if err != nil {
-		fmt.Println("misc.go ln:78 |", err)
+		LogData("misc.go err_id:007 |", err.Error())
 		return nil
 	}
 
 	if _, err := file.Seek(0, 0); err != nil {
-		fmt.Println("misc.go ln:83 |", err)
+		LogData("misc.go err_id:008 |", err.Error())
 		return nil
 	}
 	if err := file.Truncate(0); err != nil {
-		fmt.Println("misc.go ln:87 |", err)
+		LogData("misc.go err_id:009 |", err.Error())
 		return nil
 	}
 	_, err = file.Write(updatedJSON)
 	if err != nil {
-		fmt.Println("misc.go ln:92 |", err)
+		LogData("misc.go err_id:010 |", err.Error())
 		return nil
 	}
 
@@ -146,6 +149,7 @@ func ClientErr(messageStr string) ErrorMessage {
 	}
 }
 
+// This file needs to be created beforehand unlike others because its json and has a structure.
 func CreateWebClipboardFile() error {
 	file, err := os.Create(CLIPBOARD_PATH)
 	if err != nil {
@@ -168,6 +172,6 @@ func CreateWebClipboardFile() error {
 
 func InitFiles() {
 	if err := CreateWebClipboardFile(); err != nil {
-		LogData(err.Error(), SERVER_LOG_PATH)
+		LogData("misc.go err_id:011 | error creating clipboard file", err.Error())
 	}
 }

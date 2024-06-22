@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
 
@@ -17,33 +16,34 @@ func main() {
 	if len(os.Args) > 1 {
 		if os.Args[1] == "dev" {
 			if err := godotenv.Load(); err != nil {
-				log.Printf("Error loading .env file")
+				log.Println("Error loading .env file")
 			}
 		}
 	}
 
 	utils.InitGlobalVars()
 	utils.InitDirs()
-	utils.InitVars()
+	utils.S3_ObjectInfoArr()
 	utils.InitFiles()
 
 	// Download files; resume and such
 	if err := utils.S3_DownloadFiles(); err != nil {
-		utils.LogData(err.Error(), utils.SERVER_LOG_PATH)
+		utils.LogData("main.go err_id:001 | error downloading S3 files", err.Error())
 
 	} else {
-		utils.LogData("S3 Files downloaded successfully", utils.SERVER_LOG_PATH)
+		utils.LogData("S3 Files downloaded successfully 🎉")
 	}
 
 	// Download notes data
 	if err := utils.DownloadAndWriteNoteData(); err != nil {
-		utils.LogData(err.Error(), utils.SERVER_LOG_PATH)
+		utils.LogData("main.go err_id:002 | error downloading note files", err.Error())
 
 	} else {
-		utils.LogData("S3 Notes downloaded successfully", utils.SERVER_LOG_PATH)
+		utils.LogData("S3 Notes downloaded successfully 🙌")
 	}
 
 	PORT := utils.PORT
+	utils.LogData("Live on PORT", PORT, "🔥")
 
 	e := echo.New()
 	e.Use(middleware.CORS())
@@ -68,7 +68,7 @@ func main() {
 				Protocol:      v.Protocol,
 			}
 			if err := utils.AppendLogToFile(&data, utils.REQUEST_LOG_PATH); err != nil {
-				fmt.Println("main.go ln:69 |", err)
+				utils.LogData("main.go err_id:003 |", err.Error())
 			}
 			return nil
 		},
@@ -78,7 +78,6 @@ func main() {
 	e.GET("/help", handleNotesRes)
 
 	DefaultGroup(e.Group(""))
-	fmt.Printf("Live on %v", PORT)
 	e.Logger.Fatal(e.Start(":" + PORT))
 }
 

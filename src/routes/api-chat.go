@@ -2,9 +2,9 @@ package routes
 
 import (
 	"fmt"
+	"net/http"
 	"strconv"
 	"strings"
-	"net/http"
 
 	"github.com/apooravm/multi-serve/src/utils"
 	"github.com/gorilla/websocket"
@@ -68,13 +68,13 @@ func Chat(c echo.Context) error {
 				}
 			}
 		} else if clientMessage.Direction == utils.C2A {
-			utils.LogData(fmt.Sprintf("%v: %v", clientMessage.Sender, clientMessage.Content), utils.CHAT_LOG)
+			utils.LogDataToPath(utils.CHAT_LOG, fmt.Sprintf("%v: %v", clientMessage.Sender, clientMessage.Content))
 			BroadcastClientMessageAll(clientMessage, client_id)
 		}
 
 		if !hasBroadcastJoinedMsg {
 			message := clientMessage.Sender + " joined!"
-			utils.LogData(message, utils.CHAT_LOG)
+			utils.LogDataToPath(utils.CHAT_LOG, message)
 			BroadcastServerMessageAll(message)
 			hasBroadcastJoinedMsg = true
 		}
@@ -85,7 +85,7 @@ func Chat(c echo.Context) error {
 // Main method called by others
 func SendMessageToClient(message utils.Message, conn *websocket.Conn) error {
 	if err := conn.WriteJSON(message); err != nil {
-		utils.LogData(fmt.Sprintln("Error sending message to client:", err), utils.CHAT_DEBUG)
+		utils.LogDataToPath(utils.CHAT_DEBUG, fmt.Sprintln("api-chat.go err_id:001 | error sending message to client:", err))
 		return &utils.ServerError{
 			Err:    err,
 			Code:   utils.SERVER_ERR,
@@ -105,7 +105,7 @@ func ServerMessageToClient(payload string, conn *websocket.Conn) {
 		Password:  "",
 	}
 	if err := SendMessageToClient(message, conn); err != nil {
-		utils.LogData(err.Error(), utils.CHAT_DEBUG)
+		utils.LogDataToPath(utils.CHAT_DEBUG, "api-chat.go err_id:002 | error sending server message to client", err.Error())
 		return
 	}
 }
@@ -148,6 +148,6 @@ func ClientDisconnect(conn *websocket.Conn, client_id string, client *utils.Clie
 	// Delete client from the map
 	utils.ChatClientsMap.DeleteClient(client_id)
 	message := client.Username + " left!"
-	utils.LogData(message, utils.CHAT_LOG)
+	utils.LogDataToPath(utils.CHAT_LOG, message)
 	BroadcastServerMessageAll(message)
 }

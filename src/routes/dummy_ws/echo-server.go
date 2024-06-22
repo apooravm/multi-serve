@@ -1,9 +1,9 @@
 package dummy_ws
 
 import (
-	"strconv"
-	"net/http"
 	"fmt"
+	"net/http"
+	"strconv"
 
 	"github.com/apooravm/multi-serve/src/utils"
 	"github.com/gorilla/websocket"
@@ -49,8 +49,7 @@ func EchoDummyWS(c echo.Context) error {
 func broadcastToSubscribers(data string) {
 	for _, client := range SubscribedUsersMap.Clients {
 		if err := client.Conn.WriteMessage(websocket.TextMessage, []byte(data)); err != nil {
-			fmt.Println("BROAD_ALL_ERR:", err.Error())
-			utils.LogData(err.Error(), utils.DUMMY_WS_LOG_PATH)
+			utils.LogDataToPath(utils.DUMMY_WS_LOG_PATH, "BROAD_ALL_ERR:", err.Error())
 			return
 		}
 	}

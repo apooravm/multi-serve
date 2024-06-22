@@ -10,7 +10,7 @@ import (
 func HashPassword(password string) (string, error) {
 	hashedPass, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		LogData("Error hashing password", SERVER_LOG_PATH)
+		LogData("user-crud.go err_id:001 | error hashing password", err.Error())
 		return "", err
 	}
 

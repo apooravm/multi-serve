@@ -101,7 +101,7 @@ func S3_DownloadFiles() error {
 
 // Currently only 2 files
 // The resume pdf and png
-func InitVars() {
+func S3_ObjectInfoArr() {
 	S3_Files = []S3_File{
 		{
 			LocalFilePath:   LOCAL_RESUME_PATH,
