@@ -3,15 +3,19 @@ package utils
 import "os"
 
 var (
-	PORT             string
+	PORT string
+	// files
 	REQUEST_LOG_PATH string
 	SERVER_LOG_PATH  string
+
+	CLIPBOARD_PATH string
 
 	DUMMY_WS_LOG_PATH string
 
 	CHAT_DEBUG string
 	CHAT_LOG   string
-	CHAT_PASS  string
+	// ---
+	CHAT_PASS string
 
 	BUCKET_NAME         string
 	BUCKET_REGION       string
@@ -30,8 +34,6 @@ var (
 
 	DB_URL     string
 	DB_API_KEY string
-
-	CLIPBOARD_PATH string
 )
 
 func InitGlobalVars() {

@@ -170,8 +170,27 @@ func CreateWebClipboardFile() error {
 	return nil
 }
 
+func create_file(filepath string) error {
+	file, err := os.Create(filepath)
+	if err != nil {
+		return err
+	}
+
+	defer file.Close()
+
+	return nil
+}
+
 func InitFiles() {
 	if err := CreateWebClipboardFile(); err != nil {
 		LogData("misc.go err_id:011 | error creating clipboard file", err.Error())
+	}
+
+	filepaths := []string{REQUEST_LOG_PATH, SERVER_LOG_PATH, CLIPBOARD_PATH, DUMMY_WS_LOG_PATH, CHAT_DEBUG, CHAT_LOG}
+
+	for _, filepath := range filepaths {
+		if err := create_file(filepath); err != nil {
+			LogData("misc.go err_id:012 | error creating file at", filepath, err.Error())
+		}
 	}
 }
