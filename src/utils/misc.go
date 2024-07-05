@@ -186,7 +186,7 @@ func InitFiles() {
 		LogData("misc.go err_id:011 | error creating clipboard file", err.Error())
 	}
 
-	filepaths := []string{REQUEST_LOG_PATH, SERVER_LOG_PATH, CLIPBOARD_PATH, DUMMY_WS_LOG_PATH, CHAT_DEBUG, CHAT_LOG}
+	filepaths := []string{REQUEST_LOG_PATH, SERVER_LOG_PATH, DUMMY_WS_LOG_PATH, CHAT_DEBUG, CHAT_LOG}
 
 	for _, filepath := range filepaths {
 		if err := create_file(filepath); err != nil {
