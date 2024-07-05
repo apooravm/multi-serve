@@ -24,10 +24,10 @@ bin/*
 
 # Env variables
 .env
+data/
 data/S3/*
 data/notes/*
 data/logs/*
-data/
 
 # data files
 *.pdf
