@@ -1,4 +1,4 @@
-FROM golang:1.21.3-alpine
+FoakdnkffkjhbdfjbdROM golang:1.21.3-alpine
 
 WORKDIR /multi-mux
 
