@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -123,4 +124,47 @@ func DownloadAndWriteNoteData() error {
 	}
 
 	return nil
+}
+
+type FileInfo struct {
+	Filepath  string
+	Size      int64
+	ObjectKey string
+}
+
+// https://github.com/apooravm/folder-sync-S3/blob/main/src/s3/list.go
+func GetObjectKeys() (*[]FileInfo, error) {
+	cfg, err := config.LoadDefaultConfig(context.TODO(), config.WithRegion(BUCKET_REGION))
+	if err != nil {
+		return nil, err
+	}
+
+	client := s3.NewFromConfig(cfg)
+
+	res, err := client.ListObjectsV2(context.TODO(), &s3.ListObjectsV2Input{
+		Bucket: aws.String(BUCKET_NAME),
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	var objectKeySlice []FileInfo
+	for _, item := range res.Contents {
+		// Skip keys that are empty dirs.
+		// Only add keys pointing to a file.
+		if string(*item.Key)[len(*item.Key)-1] == '/' {
+			continue
+		}
+		fileBaseName := filepath.Base(string(*item.Key))
+
+		objectKeySlice = append(objectKeySlice, FileInfo{
+			Filepath:  "./downloads/" + fileBaseName,
+			Size:      item.Size,
+			ObjectKey: string(*item.Key),
+		})
+	}
+
+	return &objectKeySlice, nil
+
 }

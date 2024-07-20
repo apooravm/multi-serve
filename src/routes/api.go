@@ -23,6 +23,7 @@ func ApiGroup(group *echo.Group) {
 
 	group.GET("/ws/echo", dummy_ws.EchoDummyWS)
 
+	S3FileFetchGroup(group.Group("/files"))
 	NotesGroup(group.Group("/notes"))
 	FileTransferGroup(group.Group("/filetransfer"))
 	MiscGroup(group.Group("/misc"))
