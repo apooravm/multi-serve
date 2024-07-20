@@ -74,3 +74,6 @@ run: vendor build
 
 dev: build
 	@${BUILD_ROUTE} dev
+
+rawrun:
+	@${BUILD_ROUTE} dev

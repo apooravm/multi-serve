@@ -2,12 +2,12 @@ package utils
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
@@ -22,8 +22,8 @@ func DownloadFile(bucketName string, objPath string, region string) ([]byte, err
 	client := s3.NewFromConfig(cfg)
 
 	output, err := client.GetObject(context.TODO(), &s3.GetObjectInput{
-		Bucket: aws.String(bucketName),
-		Key:    aws.String(objPath),
+		Bucket: &bucketName,
+		Key:    &objPath,
 	})
 
 	if err != nil {
@@ -48,8 +48,8 @@ func DownloadAllObjKeys(bucketName string, prefix string, region string) ([]stri
 
 	client := s3.NewFromConfig(cfg)
 	output, err := client.ListObjectsV2(context.TODO(), &s3.ListObjectsV2Input{
-		Bucket: aws.String(bucketName),
-		Prefix: aws.String(prefix),
+		Bucket: &bucketName,
+		Prefix: &prefix,
 	})
 
 	if err != nil {
@@ -142,7 +142,7 @@ func GetObjectKeys() (*[]FileInfo, error) {
 	client := s3.NewFromConfig(cfg)
 
 	res, err := client.ListObjectsV2(context.TODO(), &s3.ListObjectsV2Input{
-		Bucket: aws.String(BUCKET_NAME),
+		Bucket: &BUCKET_NAME,
 	})
 
 	if err != nil {
@@ -160,7 +160,7 @@ func GetObjectKeys() (*[]FileInfo, error) {
 
 		objectKeySlice = append(objectKeySlice, FileInfo{
 			Filepath:  "./downloads/" + fileBaseName,
-			Size:      item.Size,
+			Size:      *item.Size,
 			ObjectKey: string(*item.Key),
 		})
 	}
