@@ -75,13 +75,5 @@ run: vendor build
 dev: build
 	@${BUILD_ROUTE} dev
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-prev:
-=======
 rawrun:
->>>>>>> 95ac417114971dd6831066b65c8f921fce359ff2
-=======
-rawrun:
->>>>>>> 95ac417114971dd6831066b65c8f921fce359ff2
 	@${BUILD_ROUTE} dev
