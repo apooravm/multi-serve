@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/apooravm/multi-serve/src/routes/dummy_ws"
+	"github.com/apooravm/multi-serve/src/routes/untitled-game"
 	"github.com/apooravm/multi-serve/src/utils"
 	"github.com/labstack/echo/v4"
 )
@@ -23,6 +24,16 @@ func ApiGroup(group *echo.Group) {
 
 	group.GET("/ws/echo", dummy_ws.EchoDummyWS)
 
+<<<<<<< HEAD
+<<<<<<< HEAD
+	group.GET("/game", untitledgame.UntitledGameSocket)
+
+=======
+	S3FileFetchGroup(group.Group("/files"))
+>>>>>>> 95ac417114971dd6831066b65c8f921fce359ff2
+=======
+	S3FileFetchGroup(group.Group("/files"))
+>>>>>>> 95ac417114971dd6831066b65c8f921fce359ff2
 	NotesGroup(group.Group("/notes"))
 	FileTransferGroup(group.Group("/filetransfer"))
 	MiscGroup(group.Group("/misc"))

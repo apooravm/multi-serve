@@ -3,7 +3,7 @@ package utils
 import "github.com/gorilla/websocket"
 
 var (
-	ChatClientsMap *ClientsMap   = NewClientsMap()
+	ChatClientsMap               = NewClientsMap[Client]()
 	Id_Gen         *id_Generator = &id_Generator{
 		start_ID: 0,
 	}

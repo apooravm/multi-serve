@@ -36,11 +36,6 @@ interface Message {
 
 */
 
-type ClientsMap struct {
-	Clients map[string]Client
-	mu      sync.RWMutex
-}
-
 const (
 	C2A = "client-to-all"
 	C2S = "client-to-server"
@@ -64,33 +59,47 @@ func (ce *ServerError) Error() string {
 	return fmt.Sprintf("%v", ce.Simple)
 }
 
-func NewClientsMap() *ClientsMap {
-	return &ClientsMap{
-		Clients: make(map[string]Client),
+// Hashmap of a client against their id.
+type ClientsMap[T any] struct {
+	Clients map[string]T
+	mu      sync.RWMutex
+}
+
+func NewClientsMap[T any]() *ClientsMap[T] {
+	return &ClientsMap[T]{
+		Clients: make(map[string]T),
 	}
 }
 
-func (c *ClientsMap) AddClient(clientID string, client *Client) {
+func (c *ClientsMap[T]) AddClient(clientID string, client *T) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.Clients[clientID] = *client
 }
 
-func (c *ClientsMap) DeleteClient(clientID string) {
+func (c *ClientsMap[T]) DeleteClient(clientID string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	delete(c.Clients, clientID)
 }
 
-func (c *ClientsMap) GetClient(clientID string) (Client, bool) {
+func (c *ClientsMap[T]) GetClient(clientID string) (T, bool) {
 	c.mu.RLock()
-	defer c.mu.RUnlock()
+	defer c.mu.Unlock()
 	client, ok := c.Clients[clientID]
 	return client, ok
 }
 
+func (c *ClientsMap[T]) UpdateClient(clientID string, updateFunc func(client T) T) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if client, exists := c.Clients[clientID]; exists {
+		c.Clients[clientID] = updateFunc(client)
+	}
+}
+
 // Returns a string of all the online clients
-func (c *ClientsMap) GetClientsStr() string {
+func GetClientsStr(c *ClientsMap[Client]) string {
 	usernameArr := []string{}
 	for _, client := range c.Clients {
 		usernameArr = append(usernameArr, client.Username)

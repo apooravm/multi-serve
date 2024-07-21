@@ -46,6 +46,7 @@ func registerNewUser(c echo.Context) error {
 
 	hashedPass, err := utils.HashPassword(newUser.Password)
 	if err != nil {
+		utils.LogData("Error Hashing" + err.Error())
 		return c.JSON(echo.ErrInternalServerError.Code, utils.InternalServerErr("Error Hashing"+err.Error()))
 	}
 
@@ -63,7 +64,8 @@ func registerNewUser(c echo.Context) error {
 	// Creating and sending request
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonBytes))
 	if err != nil {
-		return c.JSON(echo.ErrInternalServerError.Code, utils.InternalServerErr("Error Updating db: "+err.Error()))
+		utils.LogData("Error updating db:", err.Error())
+		return c.JSON(echo.ErrInternalServerError.Code, utils.InternalServerErr("Error Updating db"))
 	}
 
 	req.Header.Set("apiKey", apiKey)
@@ -74,7 +76,8 @@ func registerNewUser(c echo.Context) error {
 	client := &http.Client{}
 	res, err := client.Do(req)
 	if err != nil {
-		return c.JSON(echo.ErrInternalServerError.Code, utils.InternalServerErr("Error Updating db 2: "+err.Error()))
+		utils.LogData("Error updating db 2", err.Error())
+		return c.JSON(echo.ErrInternalServerError.Code, utils.InternalServerErr("Error Updating db 2"))
 	}
 
 	defer res.Body.Close()
@@ -154,7 +157,6 @@ func loginUser(c echo.Context) error {
 	// Get user_id
 	userProfiles, err := utils.GetUserFromEmail(newLogReq.Email)
 	if err != nil {
-		fmt.Println(err.Error())
 		return c.JSON(echo.ErrInternalServerError.Code,
 			utils.InternalServerErr(err.Error()))
 	}

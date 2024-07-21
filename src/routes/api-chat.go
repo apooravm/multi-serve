@@ -59,7 +59,7 @@ func Chat(c echo.Context) error {
 
 					// List All the client, server-side only for now
 				} else if config_split[1] == "list" {
-					BroadcastServerMessageAll("Current Online => " + utils.ChatClientsMap.GetClientsStr())
+					BroadcastServerMessageAll("Current Online => " + utils.GetClientsStr(utils.ChatClientsMap))
 
 				} else if config_split[1] == "close" {
 					// Socket disconnection
