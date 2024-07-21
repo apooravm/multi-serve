@@ -29,5 +29,7 @@ data/S3/*
 data/notes/*
 data/logs/*
 
+local/
+
 # data files
 *.pdf

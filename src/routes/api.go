@@ -1,7 +1,11 @@
 package routes
 
 import (
+	"io"
 	"net/http"
+	"os"
+	"strconv"
+	"strings"
 
 	"github.com/apooravm/multi-serve/src/routes/dummy_ws"
 	untitledgame "github.com/apooravm/multi-serve/src/routes/untitled-game"
@@ -25,6 +29,8 @@ func ApiGroup(group *echo.Group) {
 	group.GET("/ws/echo", dummy_ws.EchoDummyWS)
 
 	group.GET("/game", untitledgame.UntitledGameSocket)
+	group.GET("/video", NormalVideoStream)
+	group.GET("/chunkedvideo", ChunkedVideoStream)
 
 	S3FileFetchGroup(group.Group("/files"))
 	S3FileFetchGroup(group.Group("/files"))
@@ -34,6 +40,89 @@ func ApiGroup(group *echo.Group) {
 	JournalLoggerGroup(group.Group(("/journal")))
 	UserGroup(group.Group("/user"))
 	WebClipboardGroup(group.Group("/clipboard"))
+}
+
+func NormalVideoStream(c echo.Context) error {
+	return c.File("./local/sample_vid.mp4")
+}
+
+func ChunkedVideoStream(c echo.Context) error {
+	filePath := "./local/sample_vid.mp4"
+	file, err := os.Open(filePath)
+	if err != nil {
+		return c.String(http.StatusInternalServerError, "Failed to open file")
+	}
+	defer file.Close()
+
+	fileInfo, err := file.Stat()
+	if err != nil {
+		return c.String(http.StatusInternalServerError, "Failed to get file info")
+	}
+
+	fileSize := fileInfo.Size()
+	rangeHeader := c.Request().Header.Get("Range")
+	if rangeHeader == "" {
+		return c.File(filePath)
+	}
+
+	parts := strings.Split(rangeHeader, "=")
+	if len(parts) != 2 || parts[0] != "bytes" {
+		return c.String(http.StatusBadRequest, "Invalid range header")
+	}
+
+	rangeParts := strings.Split(parts[1], "-")
+	start, err := strconv.ParseInt(rangeParts[0], 10, 64)
+	if err != nil {
+		return c.String(http.StatusBadRequest, "Invalid range start")
+	}
+
+	var end int64
+	if len(rangeParts) > 1 && rangeParts[1] != "" {
+		end, err = strconv.ParseInt(rangeParts[1], 10, 64)
+		if err != nil {
+			return c.String(http.StatusBadRequest, "Invalid range end")
+		}
+	} else {
+		end = fileSize - 1
+	}
+
+	if start > end || end >= fileSize {
+		return c.String(http.StatusRequestedRangeNotSatisfiable, "Requested range not satisfiable")
+	}
+
+	_, err = file.Seek(start, io.SeekStart)
+	if err != nil {
+		return c.String(http.StatusInternalServerError, "Failed to seek file")
+	}
+
+	buf := make([]byte, 4096) // Adjust the buffer size as needed
+	c.Response().Header().Set(echo.HeaderContentType, "video/mp4")
+	c.Response().Header().Set("Content-Range", "bytes "+strconv.FormatInt(start, 10)+"-"+strconv.FormatInt(end, 10)+"/"+strconv.FormatInt(fileSize, 10))
+	c.Response().Header().Set("Accept-Ranges", "bytes")
+	c.Response().WriteHeader(http.StatusPartialContent)
+
+	for {
+		toRead := int64(len(buf))
+		if end-start+1 < toRead {
+			toRead = end - start + 1
+		}
+
+		n, err := file.Read(buf[:toRead])
+		if err != nil && err != io.EOF {
+			return c.String(http.StatusInternalServerError, "Error reading file")
+		}
+		if n == 0 {
+			break
+		}
+
+		if _, err := c.Response().Write(buf[:n]); err != nil {
+			return c.String(http.StatusInternalServerError, "Error writing response")
+		}
+
+		c.Response().Flush()
+		start += int64(n)
+	}
+	return nil
 }
 
 // Refreshes the local server Data

@@ -5,3 +5,4 @@ data/S3/*
 data/notes/*
 data/logs/*
 *.pdf
+local/
