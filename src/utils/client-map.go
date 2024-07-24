@@ -84,7 +84,7 @@ func (c *ClientsMap[T]) DeleteClient(clientID string) {
 }
 
 func (c *ClientsMap[T]) GetClient(clientID string) (T, bool) {
-	c.mu.RLock()
+	c.mu.Lock()
 	defer c.mu.Unlock()
 	client, ok := c.Clients[clientID]
 	return client, ok

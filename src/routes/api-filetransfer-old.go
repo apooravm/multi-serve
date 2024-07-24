@@ -69,11 +69,11 @@ var (
 	ErrInvalidTransferID = FT_Command{SentBy: "server", Command: "error", Payload: "Invalid Transfer ID"}
 )
 
-func FileTransferGroup(group *echo.Group) {
-	group.GET("", FileTransfer)
+func FileTransferGroup_old(group *echo.Group) {
+	group.GET("", FileTransfer_old)
 }
 
-func FileTransfer(c echo.Context) error {
+func FileTransfer_old(c echo.Context) error {
 	conn, err := utils.ConnUpgrader.Upgrade(c.Response(), c.Request(), nil)
 	if err != nil {
 		return &utils.ServerError{
