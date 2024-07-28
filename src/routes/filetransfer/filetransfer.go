@@ -21,10 +21,6 @@ var (
 	pass = 1
 )
 
-// Been handling this the wrong way all this while.
-// Since the ws connection persists, i just need to update the global newFTMeta which has all the info
-// Dont need to send unique_code with every request
-
 // Since handshake is a 1 time thing, it will be done through json
 type ClientHandshake struct {
 	Version uint8
@@ -73,13 +69,20 @@ func FileTransferWs(c echo.Context) error {
 			// Checking for exists should help in the ongoing loop of other conn
 			utils.LogData("E:Could not read from socket.", err.Error())
 
-			ongoingFT, exists := FTMap.GetClient(string(ongoingFTCache.Code))
-			fmt.Println(ongoingFT)
-			fmt.Println(exists)
+			ongoingFT, _ := FTMap.GetClient(string(ongoingFTCache.Code))
 			if ongoingFT.ReceiverClosed || ongoingFT.SenderClosed {
 				return nil
 			}
-			DisconnectClient(conn, ongoingFTCache.Code, "Sender side", "Receiver side")
+
+			// No other party (receiver) had connected. Can directly close sender.
+			if ongoingFT.ReceiverConn == nil {
+				_ = DisconnectConn(conn, "No response.")
+				FTMap.DeleteClient(string(ongoingFT.Code))
+				break
+			}
+
+			DisconnectClient(conn, ongoingFTCache.Code, "Closing", "Closing")
+
 			break
 		}
 
@@ -113,10 +116,10 @@ func FileTransferWs(c echo.Context) error {
 		case InitialTypeRegisterReceiver:
 			newFT, resp, err := HandleRegisterReceiver(message, conn)
 			if err != nil {
-				DisconnectClient(conn, ongoingFTCache.Code, resp.SenderDiscnMsg, resp.ReceiverDiscnMsg)
+				DisconnectConn(conn, resp.ReceiverDiscnMsg)
+				DisconnectConn(newFT.SenderConn, resp.ReceiverDiscnMsg)
 				return nil
 			}
-			fmt.Println(newFT)
 			ongoingFTCache = newFT
 
 		// Sender -> Recv
@@ -366,6 +369,8 @@ func DisconnectClient(currConn *websocket.Conn, code uint8, senderMessage, recvM
 		client.SenderClosed = true
 		return client
 	})
+
+	FTMap.DeleteClient(string(code))
 }
 
 // Server sends closeConn byte
@@ -391,7 +396,7 @@ func DisconnectConn(conn *websocket.Conn, message string) error {
 	}
 
 	// Little delay since sometimes the closeConn doesnt get written to the conn
-	time.Sleep(300 * time.Millisecond)
+	time.Sleep(50 * time.Millisecond)
 	err := conn.Close()
 	if err != nil {
 		utils.LogData(err.Error())
