@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	// "strconv"
@@ -43,6 +45,92 @@ type MDReceiver struct {
 // Need to signal using a channel
 // Work on it later
 func FileTransferWs(c echo.Context) error {
+	params := c.QueryParams()
+	intentArgs := params["intent"]
+
+	// Client intent can be either send or receive.
+	var intent string
+	var ongoingFTCache *FTMeta = &FTMeta{}
+
+	if len(intentArgs) == 0 {
+		return c.JSON(echo.ErrBadRequest.Code, utils.ClientErr("No intent found. Must be send/receive."))
+	}
+
+	intent = intentArgs[0]
+
+	// Handle initial metadata from both sender and receiver here
+	switch intent {
+	case "send":
+		var fileinfo, sendername []string
+		var allFileInfo []FileInfo
+		// if len(transfertype) != 1 {
+		// 	return c.JSON(echo.ErrBadRequest.Code, utils.ClientErr("Incomplete sender data. Transfer type missing. Must be single/dir"))
+		// }
+
+		fileinfo = params["fileinfo"]
+		sendername = params["sendername"]
+
+		if len(fileinfo) == 0 || len(sendername) != 1 {
+			return c.JSON(echo.ErrBadRequest.Code, utils.ClientErr("Incomplete sender data. Need fileinfo, sendername."))
+		}
+
+		for _, info := range fileinfo {
+			fparts := strings.Split(info, ",")
+			if len(fparts) != 2 {
+				return c.JSON(echo.ErrBadRequest.Code, utils.ClientErr("Invalid fileinfo syntax. Could not split fileinfo into path and size.", info))
+			}
+			fpath, fsize := fparts[0], fparts[1]
+
+			parsedSize, err := strconv.ParseUint(fsize, 10, 64)
+			if err != nil {
+				return c.JSON(echo.ErrBadRequest.Code, utils.ClientErr("Invalid file size. Must be uint64.", fparts[0]))
+			}
+
+			allFileInfo = append(allFileInfo, FileInfo{
+				Name:         filepath.Base(fpath),
+				RelativePath: fpath,
+				Size:         parsedSize,
+			})
+		}
+
+		parsedFilesize, err := strconv.ParseUint("0", 10, 64)
+		if err != nil {
+			return c.JSON(echo.ErrBadRequest.Code, utils.ClientErr("Invalid filesize. Need uint64."))
+		}
+
+		// Generate a uint8 unique code for the transfer.
+		unique_code := FTCodeGenerator.NewCode()
+
+		ongoingFTCache.FileInfo = &allFileInfo
+		ongoingFTCache.FileSize = parsedFilesize
+		// ongoingFTCache.Filename = filenames[0]
+		ongoingFTCache.SenderName = sendername[0]
+		ongoingFTCache.Code = unique_code
+
+	case "receive":
+		var incomingRecvCode, receivername []string
+
+		incomingRecvCode = params["code"]
+		receivername = params["receivername"]
+
+		if len(incomingRecvCode) != 1 || len(receivername) != 1 {
+			return c.JSON(echo.ErrBadRequest.Code, utils.ClientErr("Incomplete receiver data. Need code, receivername."))
+		}
+
+		// Check if transfer exists
+		ongoingFT, exists := FTMap.GetClient(incomingRecvCode[0])
+		if !exists {
+			return c.JSON(echo.ErrBadRequest.Code, utils.ClientErr("Unknown code. Transfer not found."))
+		}
+
+		// Update the map with conn later
+		ongoingFT.ReceiverName = receivername[0]
+		ongoingFTCache = &ongoingFT
+
+	default:
+		return c.JSON(echo.ErrBadRequest.Code, utils.ClientErr("Invalid intent. Must be send/receive."))
+	}
+
 	// var isSender bool = false
 	var err error
 	ConnUpgrader.CheckOrigin = func(r *http.Request) bool { return true }
@@ -54,10 +142,41 @@ func FileTransferWs(c echo.Context) error {
 
 	defer conn.Close()
 
+	// If intent -> sender add to map else if intent -> receiver update the map
+	if intent == "send" {
+		ongoingFTCache.SenderConn = conn
+		FTMap.AddClient(string(ongoingFTCache.Code), ongoingFTCache)
+		fmt.Println(ongoingFTCache)
+
+	} else if intent == "receive" {
+		ongoingFTCache.ReceiverConn = conn
+		FTMap.UpdateClient(string(ongoingFTCache.Code), func(client FTMeta) FTMeta {
+			return *ongoingFTCache
+		})
+	}
+
+	return nil
+
+	// Work on both single file transfers and transerring an entire dir
+	// Sender
+	// sender -> server setup FT [done]
+	// server -> sender respond with code
+	// receiver -> server respond with code and update FT. [done]
+	// server -> receiver
+	for {
+		select {
+		case <-ongoingFTCache.stopCh:
+			return nil
+
+		default:
+
+		}
+	}
+
 	// Memoizing the receiver conn.
 	// For the first packet, sender conn looks up from the map
 	// Saves to this and uses this for the remaining packets.
-	var ongoingFTCache *FTMeta
+	// var ongoingFTCache *FTMeta
 
 	// client_id := strconv.Itoa(utils.Id_Gen.GenerateNewID())
 	for {

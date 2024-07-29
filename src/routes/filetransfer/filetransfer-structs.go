@@ -88,10 +88,20 @@ type FTMeta struct {
 	ReceiverConn   *websocket.Conn
 	Filename       string
 	FileSize       uint64
+	FileInfo       *[]FileInfo
 	Version        uint8
 	SenderClosed   bool
 	ReceiverClosed bool
 	stopCh         chan struct{}
+}
+
+type FileInfo struct {
+	Name string
+	// Relative to the target folder.
+	RelativePath string
+	// Abs path of the file in the system.
+	AbsPath string
+	Size    uint64
 }
 
 func (ft *FTMeta) DisconnectBoth(messageSender string, messageReceiver string) {

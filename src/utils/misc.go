@@ -142,10 +142,11 @@ func InternalServerErr(messageStr string) ErrorMessage {
 	}
 }
 
-func ClientErr(messageStr string) ErrorMessage {
+func ClientErr(messageStr ...string) ErrorMessage {
+	finalMessage := strings.Join(messageStr, " ")
 	return ErrorMessage{
 		Code:    echo.ErrBadRequest.Code,
-		Message: messageStr,
+		Message: finalMessage,
 	}
 }
 
