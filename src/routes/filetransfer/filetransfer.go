@@ -12,8 +12,6 @@ import (
 	"strings"
 	"time"
 
-	// "strconv"
-
 	"github.com/apooravm/multi-serve/src/utils"
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
@@ -57,6 +55,7 @@ func FileTransferWs(c echo.Context) error {
 	}
 
 	intent = intentArgs[0]
+	var initialError error = nil
 
 	// Handle initial metadata from both sender and receiver here
 	switch intent {
@@ -71,19 +70,23 @@ func FileTransferWs(c echo.Context) error {
 		sendername = params["sendername"]
 
 		if len(fileinfo) == 0 || len(sendername) != 1 {
-			return c.JSON(echo.ErrBadRequest.Code, utils.ClientErr("Incomplete sender data. Need fileinfo, sendername."))
+			initialError = fmt.Errorf("Incomplete send data. Need fileinfo, sendername.")
+			break
 		}
 
 		for _, info := range fileinfo {
 			fparts := strings.Split(info, ",")
 			if len(fparts) != 2 {
-				return c.JSON(echo.ErrBadRequest.Code, utils.ClientErr("Invalid fileinfo syntax. Could not split fileinfo into path and size.", info))
+				initialError = fmt.Errorf("Invalid fileinfo syntax. Could not split fileinfo into path and size. %s", info)
+				break
 			}
 			fpath, fsize := fparts[0], fparts[1]
 
 			parsedSize, err := strconv.ParseUint(fsize, 10, 64)
 			if err != nil {
-				return c.JSON(echo.ErrBadRequest.Code, utils.ClientErr("Invalid file size. Must be uint64.", fparts[0]))
+				// return c.JSON(echo.ErrBadRequest.Code, utils.ClientErr("Invalid file size. Must be uint64.", fparts[0]))
+				initialError = fmt.Errorf("Invalid file size. Must be uint64. %s", fparts[0])
+				break
 			}
 
 			allFileInfo = append(allFileInfo, FileInfo{
@@ -95,7 +98,9 @@ func FileTransferWs(c echo.Context) error {
 
 		parsedFilesize, err := strconv.ParseUint("0", 10, 64)
 		if err != nil {
-			return c.JSON(echo.ErrBadRequest.Code, utils.ClientErr("Invalid filesize. Need uint64."))
+			// return c.JSON(echo.ErrBadRequest.Code, utils.ClientErr("Invalid filesize. Need uint64."))
+			initialError = fmt.Errorf("Invalid filesize. Need uint64.")
+			break
 		}
 
 		// Generate a uint8 unique code for the transfer.
@@ -114,13 +119,17 @@ func FileTransferWs(c echo.Context) error {
 		receivername = params["receivername"]
 
 		if len(incomingRecvCode) != 1 || len(receivername) != 1 {
-			return c.JSON(echo.ErrBadRequest.Code, utils.ClientErr("Incomplete receiver data. Need code, receivername."))
+			// return c.JSON(echo.ErrBadRequest.Code, utils.ClientErr("Incomplete receiver data. Need code, receivername."))
+			initialError = fmt.Errorf("Incomplete receiver data. Need code, receivername.")
+			break
 		}
 
 		// Check if transfer exists
-		ongoingFT, exists := FTMap.GetClient(incomingRecvCode[0])
+		ongoingFT, exists := FTMap.GetClient(fmt.Sprint(incomingRecvCode[0]))
 		if !exists {
-			return c.JSON(echo.ErrBadRequest.Code, utils.ClientErr("Unknown code. Transfer not found."))
+			// return c.JSON(echo.ErrBadRequest.Code, utils.ClientErr("Unknown code. Transfer not found."))
+			initialError = fmt.Errorf("Unknown code. Transfer not found.")
+			break
 		}
 
 		// Update the map with conn later
@@ -128,7 +137,9 @@ func FileTransferWs(c echo.Context) error {
 		ongoingFTCache = &ongoingFT
 
 	default:
-		return c.JSON(echo.ErrBadRequest.Code, utils.ClientErr("Invalid intent. Must be send/receive."))
+		// return c.JSON(echo.ErrBadRequest.Code, utils.ClientErr("Invalid intent. Must be send/receive."))
+		initialError = fmt.Errorf("Invalid intent. Must be send/receive.")
+		break
 	}
 
 	// var isSender bool = false
@@ -140,19 +151,56 @@ func FileTransferWs(c echo.Context) error {
 		return err
 	}
 
-	defer conn.Close()
+	defer DisconnectBoth(intent, ongoingFTCache, conn)
+
+	// Since we cannot respond with http errors to ws
+	if initialError != nil {
+		// Writing the reason for disconnct
+		_ = ConnWriteMessage(conn, initialError.Error())
+
+		// Notifyin the client about the imminent disconnect
+		closeNotifPacket, err := CreateBinaryPacket(version, InitialTypeCloseConnNotify)
+		if err != nil {
+			fmt.Printf("Could not create packet. %s\n", err.Error())
+
+		} else {
+			_ = conn.WriteMessage(websocket.BinaryMessage, closeNotifPacket)
+		}
+
+		// Finally closing
+		_ = conn.Close()
+		return nil
+	}
 
 	// If intent -> sender add to map else if intent -> receiver update the map
 	if intent == "send" {
 		ongoingFTCache.SenderConn = conn
-		FTMap.AddClient(string(ongoingFTCache.Code), ongoingFTCache)
-		fmt.Println(ongoingFTCache)
+		FTMap.AddClient(fmt.Sprint(ongoingFTCache.Code), ongoingFTCache)
 
 	} else if intent == "receive" {
 		ongoingFTCache.ReceiverConn = conn
+		fmt.Println(ongoingFTCache.Code)
 		FTMap.UpdateClient(string(ongoingFTCache.Code), func(client FTMeta) FTMeta {
 			return *ongoingFTCache
 		})
+
+		// Reply back to the receiver with the MD
+		jsonByteArr, err := json.Marshal(ongoingFTCache.FileInfo)
+		if err != nil {
+			if err := ConnWriteMessage(conn, "Could not marshal response metadata.", err.Error()); err != nil {
+				fmt.Println("E:Writing to receiver. Metadata response marshalling error.", err.Error())
+			}
+			DisconnectBoth(intent, ongoingFTCache, conn)
+		}
+
+		MDPacket, err := CreateBinaryPacket(InitialTypeReceiverMD, jsonByteArr)
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+
+		if err := ongoingFTCache.ReceiverConn.WriteMessage(websocket.BinaryMessage, MDPacket); err != nil {
+			fmt.Println("E:Writing to receiver. Metadata response.", err.Error())
+		}
 	}
 
 	return nil
@@ -169,6 +217,26 @@ func FileTransferWs(c echo.Context) error {
 			return nil
 
 		default:
+			messageType, message, err := conn.ReadMessage()
+			if err != nil {
+				_ = DisconnectBoth(intent, ongoingFTCache, conn)
+				return err
+			}
+
+			if messageType != websocket.BinaryMessage {
+				DisconnectBoth(intent, ongoingFTCache, conn)
+			}
+
+			// Only version or less was sent
+			if len(message) < 2 {
+				// ConnWriteMessage(conn, []byte("Empty payload."))
+				continue
+			}
+
+			switch message[1] {
+			case InitialTypeRequestNextPacket:
+
+			}
 
 		}
 	}
@@ -179,143 +247,142 @@ func FileTransferWs(c echo.Context) error {
 	// var ongoingFTCache *FTMeta
 
 	// client_id := strconv.Itoa(utils.Id_Gen.GenerateNewID())
-	for {
-		// Sudden disconnect makes this throw err
-		// Incase either suddenly disconnect
-		// Send a message to the other and close the connection.
-		messageType, message, err := conn.ReadMessage()
-		if err != nil {
-			// Checking for exists should help in the ongoing loop of other conn
-			utils.LogData("E:Could not read from socket.", err.Error())
-
-			ongoingFT, _ := FTMap.GetClient(string(ongoingFTCache.Code))
-			if ongoingFT.ReceiverClosed || ongoingFT.SenderClosed {
-				return nil
-			}
-
-			// No other party (receiver) had connected. Can directly close sender.
-			if ongoingFT.ReceiverConn == nil {
-				_ = DisconnectConn(conn, "No response.")
-				FTMap.DeleteClient(string(ongoingFT.Code))
-				return nil
-			}
-
-			DisconnectClient(conn, ongoingFTCache.Code, "Closing", "Closing")
-
-			return nil
-		}
-
-		if messageType != websocket.BinaryMessage {
-			utils.LogData("Unexpected message type.", strconv.Itoa(messageType))
-			ConnWriteMessage(conn, []byte("Unexpected message type"))
-			continue
-		}
-
-		// only version and initial_byte were sent
-		if len(message) < 1 {
-			fmt.Println(message)
-			ConnWriteMessage(conn, []byte("Empty payload."))
-			continue
-		}
-
-		// first byte always should be the version
-		// second the initial_byte
-		// [version][initial_byte][...]
-		// Different initial types
-		switch message[1] {
-		case InitialTypeRegisterSender:
-			// isSender = true
-			newFT, err := HandleRegisterSender(message, conn)
-			if err != nil {
-				DisconnectConn(conn, err.Error())
-				return nil
-			}
-			ongoingFTCache = newFT
-
-		case InitialTypeRegisterReceiver:
-			incomingBuffer := bytes.NewBuffer(message[2:])
-
-			code, recvName, err := ParseReceiverCode(incomingBuffer)
-			if err != nil {
-				_ = DisconnectConn(conn, "Could not parse code.")
-				return nil
-			}
-
-			_, exists := FTMap.GetClient(string(code))
-			if !exists {
-				if err := DisconnectConn(conn, "Sender not found."); err != nil {
-					fmt.Println(err.Error())
-				}
-				return nil
-			}
-
-			newFT, resp, err := HandleRegisterReceiver(recvName, code, incomingBuffer, conn)
-			if err != nil {
-				DisconnectConn(conn, resp.ReceiverDiscnMsg)
-				DisconnectConn(newFT.SenderConn, resp.ReceiverDiscnMsg)
-				return nil
-			}
-			ongoingFTCache = newFT
-
-		// Sender -> Recv
-		case InitialTypeTransferPacket:
-			ongoig, _ := FTMap.GetClient(string(ongoingFTCache.Code))
-			ongoingFTCache = &ongoig
-
-			pass += 1
-			if err := ongoingFTCache.ReceiverConn.WriteMessage(websocket.BinaryMessage, message); err != nil {
-				fmt.Println("E:Requesting next packet")
-			}
-
-		// Recv -> Sender
-		case InitialTypeRequestNextPkt:
-			if err := ongoingFTCache.SenderConn.WriteMessage(websocket.BinaryMessage, message); err != nil {
-				fmt.Println("E:Requesting next packet")
-			}
-
-		// Sender -> Server
-		case InitialTypeFinishTransfer:
-			finishPing := append([]byte{version, InitialTypeFinishTransfer}, message...)
-			if err := ongoingFTCache.ReceiverConn.WriteMessage(websocket.TextMessage, finishPing); err != nil {
-				utils.LogData("E:Writing to websocket. Message was", string(message))
-			}
-
-			DisconnectClient(conn, ongoingFTCache.Code, "", "Transfer finished")
-
-			// Packet frame
-		// 0 -> sender, 1 -> receiver
-		// [init_byte][unique_code][sender_or_reic]
-		// May not need this one here
-		case InitialTypeCloseConn:
-			return nil
-
-		case InitialAbortTransfer:
-			if ongoingFTCache.SenderConn == conn {
-				DisconnectClient(conn, ongoingFTCache.Code, "", "Sender aborted")
-
-			} else {
-				DisconnectClient(conn, ongoingFTCache.Code, "Receiver aborted", "")
-			}
-
-			return nil
-
-		default:
-			DisconnectConn(conn, "Bro what? Unknown type.")
-			return nil
-		}
-
-	}
+	// for {
+	// 	// Sudden disconnect makes this throw err
+	// 	// Incase either suddenly disconnect
+	// 	// Send a message to the other and close the connection.
+	// 	messageType, message, err := conn.ReadMessage()
+	// 	if err != nil {
+	// 		// Checking for exists should help in the ongoing loop of other conn
+	// 		utils.LogData("E:Could not read from socket.", err.Error())
+	//
+	// 		ongoingFT, _ := FTMap.GetClient(string(ongoingFTCache.Code))
+	// 		if ongoingFT.ReceiverClosed || ongoingFT.SenderClosed {
+	// 			return nil
+	// 		}
+	//
+	// 		// No other party (receiver) had connected. Can directly close sender.
+	// 		if ongoingFT.ReceiverConn == nil {
+	// 			_ = DisconnectConn(conn, "No response.")
+	// 			FTMap.DeleteClient(string(ongoingFT.Code))
+	// 			return nil
+	// 		}
+	//
+	// 		DisconnectClient(conn, ongoingFTCache.Code, "Closing", "Closing")
+	//
+	// 		return nil
+	// 	}
+	//
+	// 	if messageType != websocket.BinaryMessage {
+	// 		utils.LogData("Unexpected message type.", strconv.Itoa(messageType))
+	// 		ConnWriteMessage(conn, []byte("Unexpected message type"))
+	// 		continue
+	// 	}
+	//
+	// 	// only version and initial_byte were sent
+	// 	if len(message) < 1 {
+	// 		fmt.Println(message)
+	// 		ConnWriteMessage(conn, []byte("Empty payload."))
+	// 		continue
+	// 	}
+	//
+	// 	// first byte always should be the version
+	// 	// second the initial_byte
+	// 	// [version][initial_byte][...]
+	// 	// Different initial types
+	// 	switch message[1] {
+	// 	case InitialTypeRegisterSender:
+	// 		// isSender = true
+	// 		newFT, err := HandleRegisterSender(message, conn)
+	// 		if err != nil {
+	// 			DisconnectConn(conn, err.Error())
+	// 			return nil
+	// 		}
+	// 		ongoingFTCache = newFT
+	//
+	// 	case InitialTypeRegisterReceiver:
+	// 		incomingBuffer := bytes.NewBuffer(message[2:])
+	//
+	// 		code, recvName, err := ParseReceiverCode(incomingBuffer)
+	// 		if err != nil {
+	// 			_ = DisconnectConn(conn, "Could not parse code.")
+	// 			return nil
+	// 		}
+	//
+	// 		_, exists := FTMap.GetClient(string(code))
+	// 		if !exists {
+	// 			if err := DisconnectConn(conn, "Sender not found."); err != nil {
+	// 				fmt.Println(err.Error())
+	// 			}
+	// 			return nil
+	// 		}
+	//
+	// 		newFT, resp, err := HandleRegisterReceiver(recvName, code, incomingBuffer, conn)
+	// 		if err != nil {
+	// 			DisconnectConn(conn, resp.ReceiverDiscnMsg)
+	// 			DisconnectConn(newFT.SenderConn, resp.ReceiverDiscnMsg)
+	// 			return nil
+	// 		}
+	// 		ongoingFTCache = newFT
+	//
+	// 	// Sender -> Recv
+	// 	case InitialTypeTransferPacket:
+	// 		ongoig, _ := FTMap.GetClient(string(ongoingFTCache.Code))
+	// 		ongoingFTCache = &ongoig
+	//
+	// 		pass += 1
+	// 		if err := ongoingFTCache.ReceiverConn.WriteMessage(websocket.BinaryMessage, message); err != nil {
+	// 			fmt.Println("E:Requesting next packet")
+	// 		}
+	//
+	// 	// Recv -> Sender
+	// 	case InitialTypeRequestNextPkt:
+	// 		if err := ongoingFTCache.SenderConn.WriteMessage(websocket.BinaryMessage, message); err != nil {
+	// 			fmt.Println("E:Requesting next packet")
+	// 		}
+	//
+	// 	// Sender -> Server
+	// 	case InitialTypeFinishTransfer:
+	// 		finishPing := append([]byte{version, InitialTypeFinishTransfer}, message...)
+	// 		if err := ongoingFTCache.ReceiverConn.WriteMessage(websocket.TextMessage, finishPing); err != nil {
+	// 			utils.LogData("E:Writing to websocket. Message was", string(message))
+	// 		}
+	//
+	// 		DisconnectClient(conn, ongoingFTCache.Code, "", "Transfer finished")
+	//
+	// 		// Packet frame
+	// 	// 0 -> sender, 1 -> receiver
+	// 	// [init_byte][unique_code][sender_or_reic]
+	// 	// May not need this one here
+	// 	case InitialTypeCloseConn:
+	// 		return nil
+	//
+	// 	case InitialAbortTransfer:
+	// 		if ongoingFTCache.SenderConn == conn {
+	// 			DisconnectClient(conn, ongoingFTCache.Code, "", "Sender aborted")
+	//
+	// 		} else {
+	// 			DisconnectClient(conn, ongoingFTCache.Code, "Receiver aborted", "")
+	// 		}
+	//
+	// 		return nil
+	//
+	// 	default:
+	// 		DisconnectConn(conn, "Bro what? Unknown type.")
+	// 		return nil
+	// 	}
+	//
+	// }
 }
 
-func CreateBinaryPacket(parts ...any) ([]byte, error) {
-	responseBfr := new(bytes.Buffer)
-	for _, part := range parts {
-		if err := binary.Write(responseBfr, binary.BigEndian, part); err != nil {
-			return nil, err
-		}
-	}
+func HandleSender(ongoingFT *FTMeta) error {
 
-	return responseBfr.Bytes(), nil
+	return nil
+}
+
+func HandleReceiver(ongoingFT *FTMeta) error {
+
+	return nil
 }
 
 // func WriteBinaryPkt(conn *websocket.Conn, packet []byte, errorMessage string, isSender bool) error {
@@ -520,17 +587,6 @@ func DisconnectConn(conn *websocket.Conn, message string) error {
 	if err != nil {
 		utils.LogData(err.Error())
 		return fmt.Errorf("E:Writing closing socket. %s %s", message, err.Error())
-	}
-
-	return nil
-}
-
-// Make sure to append [vesion][initial_byte]
-func ConnWriteMessage(conn *websocket.Conn, message []byte) error {
-	finalMsg := append([]byte{version, InitialTypeTextMessage}, message...)
-	if err := conn.WriteMessage(websocket.TextMessage, finalMsg); err != nil {
-		utils.LogData("E:Writing to websocket. Message was", string(message))
-		return err
 	}
 
 	return nil
