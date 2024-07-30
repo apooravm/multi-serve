@@ -68,6 +68,9 @@ const (
 	// Server notifies the client that the connection is going to be closed.
 	InitialTypeCloseConnNotify = uint8(0x27)
 
+	// Server responds back to sender with the transfer code
+	InitialTypeTransferCode = uint8(0x28)
+
 	// current version
 	version = byte(1)
 )
@@ -102,18 +105,19 @@ func (idGen *FTCode_Generator) NewCode() uint8 {
 
 // Metadata for single file transfer transaction.
 type FTMeta struct {
-	Code           uint8
-	SenderName     string
-	ReceiverName   string
-	SenderConn     *websocket.Conn
-	ReceiverConn   *websocket.Conn
-	Filename       string
-	FileSize       uint64
-	FileInfo       *[]FileInfo
-	Version        uint8
-	SenderClosed   bool
-	ReceiverClosed bool
-	stopCh         chan struct{}
+	Code            uint8
+	SenderName      string
+	ReceiverName    string
+	SenderConn      *websocket.Conn
+	ReceiverConn    *websocket.Conn
+	Filename        string
+	FileSize        uint64
+	FileInfo        *[]FileInfo
+	Version         uint8
+	SenderClosed    bool
+	ReceiverClosed  bool
+	stopCh          chan struct{}
+	TransferStopped bool
 }
 
 type FileInfo struct {
@@ -143,6 +147,10 @@ type FTPacket struct {
 	Code     uint8
 	DataSize uint16
 	Data     []byte
+}
+
+func idk() {
+	// sync.Map
 }
 
 // packetBytes := []byte{
