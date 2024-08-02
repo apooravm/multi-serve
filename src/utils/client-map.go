@@ -61,20 +61,20 @@ func (ce *ServerError) Error() string {
 
 // Hashmap of a client against their id.
 type ClientsMap[T any] struct {
-	Clients map[string]T
+	Clients map[string]*T
 	mu      sync.RWMutex
 }
 
 func NewClientsMap[T any]() *ClientsMap[T] {
 	return &ClientsMap[T]{
-		Clients: make(map[string]T),
+		Clients: make(map[string]*T),
 	}
 }
 
 func (c *ClientsMap[T]) AddClient(clientID string, client *T) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.Clients[clientID] = *client
+	c.Clients[clientID] = client
 }
 
 func (c *ClientsMap[T]) DeleteClient(clientID string) {
@@ -83,14 +83,14 @@ func (c *ClientsMap[T]) DeleteClient(clientID string) {
 	delete(c.Clients, clientID)
 }
 
-func (c *ClientsMap[T]) GetClient(clientID string) (T, bool) {
+func (c *ClientsMap[T]) GetClient(clientID string) (*T, bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	client, ok := c.Clients[clientID]
 	return client, ok
 }
 
-func (c *ClientsMap[T]) UpdateClient(clientID string, updateFunc func(client T) T) {
+func (c *ClientsMap[T]) UpdateClient(clientID string, updateFunc func(client *T) *T) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if client, exists := c.Clients[clientID]; exists {

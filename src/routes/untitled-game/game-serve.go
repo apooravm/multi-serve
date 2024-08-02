@@ -88,7 +88,7 @@ func UntitledGameSocket(c echo.Context) error {
 				return nil
 
 			case 3:
-				utils.GamePlayersMap.UpdateClient(client_id, func(client utils.PlayerClient) utils.PlayerClient {
+				utils.GamePlayersMap.UpdateClient(client_id, func(client *utils.PlayerClient) *utils.PlayerClient {
 					client.PosX = clientMessage.Px
 					client.PosY = clientMessage.Py
 					return client

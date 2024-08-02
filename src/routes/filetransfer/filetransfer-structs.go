@@ -45,8 +45,6 @@ const (
 	InitialTypeRequestNextPkt = uint8(0x10)
 	InitialTypeFinishTransfer = uint8(0x11)
 
-	InitialAbortTransfer = uint8(0x12)
-
 	// Server responds with transfer metadata of the transfer to receiver
 	InitialTypeReceiverMD = uint8(0x21)
 
@@ -59,7 +57,7 @@ const (
 	// All files have finished transferring
 	InitialTypeAllTransferFinish = uint8(0x24)
 
-	// Some error occured on either sender/receiver side and transfer is aborted.
+	// Client, sender or receiver, requests the server to abort the transfer.
 	InitialTypeAbortTransfer = uint8(0x25)
 
 	// Server messages client
@@ -71,8 +69,14 @@ const (
 	// Server responds back to sender with the transfer code
 	InitialTypeTransferCode = uint8(0x28)
 
+	// Receiver aborts the transfer
+	InitialAbortTransfer = uint8(0x29)
+
+	// Receiver invokes a transfer of file with given idx from the server.
+	InitialTypeStartTransferWithId = uint8(0x30)
+
 	// current version
-	version = byte(1)
+	Version = byte(1)
 )
 
 var (
@@ -127,6 +131,10 @@ type FileInfo struct {
 	// Abs path of the file in the system.
 	AbsPath string
 	Size    uint64
+
+	// Unique id for each file. Used to invoke transfer of a certain file from the sender.
+	// Only 254 files can be shared at once
+	Id uint8
 }
 
 func (ft *FTMeta) DisconnectBoth(messageSender string, messageReceiver string) {

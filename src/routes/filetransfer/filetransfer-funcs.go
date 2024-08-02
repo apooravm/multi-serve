@@ -27,7 +27,7 @@ func ConnWriteMessage(conn *websocket.Conn, message ...string) error {
 	joinedMsg := strings.Join(message, " ")
 	byteMsg := []byte(joinedMsg)
 
-	finalMsg := append([]byte{version, InitialTypeTextMessage}, byteMsg...)
+	finalMsg := append([]byte{Version, InitialTypeTextMessage}, byteMsg...)
 	if err := conn.WriteMessage(websocket.TextMessage, finalMsg); err != nil {
 		utils.LogData("E:Writing to websocket. Message was", joinedMsg)
 		return err
@@ -45,20 +45,23 @@ func ConnWriteMessage(conn *websocket.Conn, message ...string) error {
 // Instead just updating the TransferStopped flag in the FTMeta and
 // checking if it was when the other conn crashes.
 // Other conn then deletes the obj from map and returns
-func DisconnectBoth(intent string, ongoingFT *FTMeta) error {
+func DisconnectBoth(intent string, ongoingFT *FTMeta, disconnectReason string) error {
 	updatedOngoingFT, _ := FTMap.GetClient(fmt.Sprint(ongoingFT.Code))
 
-	FTMap.UpdateClient(fmt.Sprint(updatedOngoingFT.Code), func(client FTMeta) FTMeta {
+	FTMap.UpdateClient(fmt.Sprint(updatedOngoingFT.Code), func(client *FTMeta) *FTMeta {
 		client.TransferStopped = true
 		return client
 	})
 
+	disconnectReasonPkt, _ := CreateBinaryPacket(Version, InitialTypeTextMessage, []byte(disconnectReason))
 	// Sent to notify the client of the imminent disconnect.
-	closeNotifPacket, _ := CreateBinaryPacket(version, InitialTypeCloseConnNotify)
+	closeNotifPacket, _ := CreateBinaryPacket(Version, InitialTypeCloseConnNotify)
 
 	if intent == "send" {
 		// If recv connected
 		// Notify the connected ones about the closing.
+		_ = updatedOngoingFT.SenderConn.WriteMessage(websocket.BinaryMessage, disconnectReasonPkt)
+
 		if err := updatedOngoingFT.SenderConn.WriteMessage(websocket.BinaryMessage, closeNotifPacket); err != nil {
 			utils.LogData("E:Writing notif to sender.", err.Error())
 		}
@@ -68,10 +71,8 @@ func DisconnectBoth(intent string, ongoingFT *FTMeta) error {
 		}
 
 		if updatedOngoingFT.ReceiverConn != nil {
-			disconnReason := "Sender left."
 			// Ignoring err for packet creation since its always going to work
-			pkt, _ := CreateBinaryPacket(version, InitialTypeTextMessage, []byte(disconnReason))
-			_ = updatedOngoingFT.ReceiverConn.WriteMessage(websocket.BinaryMessage, pkt)
+			_ = updatedOngoingFT.ReceiverConn.WriteMessage(websocket.BinaryMessage, disconnectReasonPkt)
 
 			_ = updatedOngoingFT.ReceiverConn.WriteMessage(websocket.BinaryMessage, closeNotifPacket)
 
@@ -86,9 +87,8 @@ func DisconnectBoth(intent string, ongoingFT *FTMeta) error {
 		}
 
 	} else if intent == "receive" {
-		disconnReason := "Receiver left."
-		pkt, _ := CreateBinaryPacket(version, InitialTypeTextMessage, []byte(disconnReason))
-		_ = updatedOngoingFT.SenderConn.WriteMessage(websocket.BinaryMessage, pkt)
+		_ = updatedOngoingFT.SenderConn.WriteMessage(websocket.BinaryMessage, disconnectReasonPkt)
+		_ = updatedOngoingFT.ReceiverConn.WriteMessage(websocket.BinaryMessage, disconnectReasonPkt)
 
 		_ = updatedOngoingFT.SenderConn.WriteMessage(websocket.BinaryMessage, closeNotifPacket)
 		if err := updatedOngoingFT.SenderConn.Close(); err != nil {

@@ -31,7 +31,7 @@ func InitDirs() {
 // Variadic function that can take any number of data.
 func LogDataToPath(logFilePath string, data ...string) {
 	dataJoined := strings.Join(data, " ")
-
+	// fmt.Println("DEVMODE_LOG:", dataJoined)
 	file, err := os.OpenFile(logFilePath, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
 	if err != nil {
 		log.Println("misc.go err_id:002 |", err.Error())
