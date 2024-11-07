@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -58,22 +59,35 @@ func FetchClipboardData(c echo.Context) error {
 }
 
 func WriteWebClipboardData(updatedData *[]string) error {
-	newArr, err := json.MarshalIndent(updatedData, "", "    ")
+	// newArr, err := json.MarshalIndent(updatedData, "", "    ")
+	newArr, err := json.Marshal(updatedData)
 	if err != nil {
 		return fmt.Errorf("error encoding data. %s", err.Error())
 	}
 
-	if err := os.WriteFile(utils.CLIPBOARD_PATH, newArr, 0644); err != nil {
+	if err := os.WriteFile(utils.CLIPBOARD_PATH_JSON, newArr, 0644); err != nil {
 		return fmt.Errorf("error writing to file. %s", err.Error())
 	}
 
 	return nil
 }
 
+// Doesnt maintain the formatting.
+// Store in an empty file
 func ReadWebClipboardData() (*[]string, error) {
 	var data []string
 
-	file, err := os.Open(utils.CLIPBOARD_PATH)
+	fT, err := os.Open(utils.CLIPBOARD_PATH_TXT)
+	if err != nil {
+		return nil, fmt.Errorf("error reading clipboard text file. %s", err.Error())
+	}
+
+	scanner := bufio.NewScanner(fT)
+	for scanner.Scan() {
+
+	}
+
+	file, err := os.Open(utils.CLIPBOARD_PATH_JSON)
 	if err != nil {
 		return nil, fmt.Errorf("error reading clipboard file. %s", err.Error())
 	}

@@ -114,6 +114,11 @@ func GetResumeHTML(c echo.Context) error {
 	return c.File(resumeFilePath)
 }
 
+func GetResumeMarkdown(c echo.Context) error {
+	resumeFilepath := utils.LOCAL_RESUME_MD_PATH
+	return c.File(resumeFilepath)
+}
+
 func GetServerLogs(c echo.Context) error {
 	pass := c.QueryParam("pass")
 

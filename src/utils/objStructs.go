@@ -115,6 +115,10 @@ func S3_ObjectInfoArr() {
 			LocalFilePath:   LOCAL_RESUME_HTML_PATH,
 			BucketObjectKey: OBJ_RESUME_HTML_KEY,
 		},
+		{
+			LocalFilePath:   LOCAL_RESUME_MD_PATH,
+			BucketObjectKey: OBJ_RESUME_MD_KEY,
+		},
 	}
 }
 

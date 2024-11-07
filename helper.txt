@@ -57,3 +57,5 @@ Posts a new log entry
 GET /api/ws/echo
 Dummy Websocket endpoint. More at: https://apooravm.vercel.app/echows
 
+GET /api/journal/write/ [username, password, write]
+Write/Update to note idk

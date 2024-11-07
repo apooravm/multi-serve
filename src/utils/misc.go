@@ -152,7 +152,7 @@ func ClientErr(messageStr ...string) ErrorMessage {
 
 // This file needs to be created beforehand unlike others because its json and has a structure.
 func CreateWebClipboardFile() error {
-	file, err := os.Create(CLIPBOARD_PATH)
+	file, err := os.Create(CLIPBOARD_PATH_JSON)
 	if err != nil {
 		return fmt.Errorf("error creating webClipboard file. %s", err.Error())
 	}
@@ -187,7 +187,7 @@ func InitFiles() {
 		LogData("misc.go err_id:011 | error creating clipboard file", err.Error())
 	}
 
-	filepaths := []string{REQUEST_LOG_PATH, SERVER_LOG_PATH, DUMMY_WS_LOG_PATH, CHAT_DEBUG, CHAT_LOG}
+	filepaths := []string{REQUEST_LOG_PATH, SERVER_LOG_PATH, DUMMY_WS_LOG_PATH, CHAT_DEBUG, CHAT_LOG, CLIPBOARD_PATH_TXT}
 
 	for _, filepath := range filepaths {
 		if err := create_file(filepath); err != nil {
