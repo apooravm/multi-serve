@@ -59,7 +59,10 @@ func main() {
 	blog.Use(middleware.Logger())
 	blog.Use(middleware.Recover())
 
-	blog_endpoint := fmt.Sprintf("blog.localhost:%s", PORT)
+	blog_endpoint := "blog.multi-serve.onrender.com"
+	if os.Args[0] == "dev" {
+		blog_endpoint = fmt.Sprintf("blog.localhost:%s", PORT)
+	}
 	hosts[blog_endpoint] = &Host{blog}
 
 	blog.GET("/", func(c echo.Context) error {
@@ -96,7 +99,10 @@ func main() {
 	}))
 	api.Use(middleware.Recover())
 	api.Static("/", "public")
-	api_endpoint := fmt.Sprintf("localhost:%s", PORT)
+	api_endpoint := "multi-serve.onrender.com"
+	if os.Args[0] == "dev" {
+		api_endpoint = fmt.Sprintf("localhost:%s", PORT)
+	}
 	hosts[api_endpoint] = &Host{api}
 
 	api.GET("/help", handleNotesRes)
