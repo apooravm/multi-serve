@@ -1,7 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"log"
+	"net/http"
 	"os"
 
 	"github.com/apooravm/multi-serve/src/routes"
@@ -10,6 +12,12 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+)
+
+type (
+	Host struct {
+		Echo *echo.Echo
+	}
 )
 
 func main() {
@@ -25,6 +33,8 @@ func main() {
 	utils.InitDirs()
 	utils.S3_ObjectInfoArr()
 	utils.InitFiles()
+
+	hosts := map[string]*Host{}
 
 	// Download files; resume and such
 	if err := utils.S3_DownloadFiles(); err != nil {
@@ -45,9 +55,20 @@ func main() {
 	PORT := utils.PORT
 	utils.LogData("Live on PORT", PORT, "🔥")
 
-	e := echo.New()
-	e.Use(middleware.CORS())
-	e.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
+	blog := echo.New()
+	blog.Use(middleware.Logger())
+	blog.Use(middleware.Recover())
+
+	blog_endpoint := fmt.Sprintf("blog.localhost:%s", PORT)
+	hosts[blog_endpoint] = &Host{blog}
+
+	blog.GET("/", func(c echo.Context) error {
+		return c.String(http.StatusOK, "Blog")
+	})
+
+	api := echo.New()
+	api.Use(middleware.CORS())
+	api.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
 		LogStatus: true,
 		LogURI:    true,
 		BeforeNextFunc: func(c echo.Context) {
@@ -73,12 +94,32 @@ func main() {
 			return nil
 		},
 	}))
-	e.Use(middleware.Recover())
-	e.Static("/", "public")
-	e.GET("/help", handleNotesRes)
+	api.Use(middleware.Recover())
+	api.Static("/", "public")
+	api_endpoint := fmt.Sprintf("localhost:%s", PORT)
+	hosts[api_endpoint] = &Host{api}
 
-	DefaultGroup(e.Group(""))
-	e.Logger.Fatal(e.Start(":" + PORT))
+	api.GET("/help", handleNotesRes)
+	DefaultGroup(api.Group(""))
+
+	server := echo.New()
+	server.Any("/*", func(c echo.Context) error {
+		req := c.Request()
+		res := c.Response()
+		host := hosts[req.Host]
+		var err error
+
+		if host == nil {
+			err = echo.ErrNotFound
+
+		} else {
+			host.Echo.ServeHTTP(res, req)
+		}
+
+		return err
+	})
+
+	server.Logger.Fatal(server.Start(":" + PORT))
 }
 
 func handleNotesRes(c echo.Context) error {
