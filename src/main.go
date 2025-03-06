@@ -1,17 +1,23 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
+	"sync"
 
 	"github.com/apooravm/multi-serve/src/routes"
 	"github.com/apooravm/multi-serve/src/utils"
 
+	"github.com/gliderlabs/ssh"
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	// "golang.org/x/crypto/ssh"
+	gossh "golang.org/x/crypto/ssh"
 )
 
 type (
@@ -20,10 +26,14 @@ type (
 	}
 )
 
-func main() {
+// TODO: Subdomains not working for now
+// Need to purchase a custom domain for that
+// Problem for future self
+// Disabling subdomains for now
+func startHTTPServer() {
 	if len(os.Args) > 1 {
 		if os.Args[1] == "dev" {
-			if err := godotenv.Load(); err != nil {
+			if err := godotenv.Load("./secrets/.env"); err != nil {
 				log.Println("Error loading .env file")
 			}
 		}
@@ -107,25 +117,44 @@ func main() {
 
 	api.GET("/help", handleNotesRes)
 	DefaultGroup(api.Group(""))
+	api.Logger.Fatal(api.Start(":" + PORT))
 
-	server := echo.New()
-	server.Any("/*", func(c echo.Context) error {
-		req := c.Request()
-		res := c.Response()
-		host := hosts[req.Host]
-		var err error
+	// server := echo.New()
+	// server.Any("/*", func(c echo.Context) error {
+	// 	req := c.Request()
+	// 	res := c.Response()
+	// 	host := hosts[req.Host]
+	// 	var err error
+	//
+	// 	if host == nil {
+	// 		err = echo.ErrNotFound
+	//
+	// 	} else {
+	// 		host.Echo.ServeHTTP(res, req)
+	// 	}
+	//
+	// 	return err
+	// })
+	//
+	// server.Logger.Fatal(server.Start(":" + PORT))
+}
 
-		if host == nil {
-			err = echo.ErrNotFound
+func main() {
+	var wg sync.WaitGroup
+	wg.Add(2)
 
-		} else {
-			host.Echo.ServeHTTP(res, req)
-		}
+	go func() {
+		defer wg.Done()
+		startHTTPServer()
+	}()
 
-		return err
-	})
+	go func() {
+		defer wg.Done()
+		startSSHServer()
+	}()
 
-	server.Logger.Fatal(server.Start(":" + PORT))
+	log.Println("Servers running...")
+	wg.Wait()
 }
 
 func handleNotesRes(c echo.Context) error {
@@ -134,4 +163,68 @@ func handleNotesRes(c echo.Context) error {
 
 func DefaultGroup(group *echo.Group) {
 	routes.ApiGroup(group.Group("/api"))
+}
+
+func startSSHServer() {
+	pvt_key_loc := "/etc/secrets/multi_serve_ssh_key"
+	if len(os.Args) > 1 {
+		if os.Args[1] == "dev" {
+			pvt_key_loc = "./secrets/multi_serve_ssh_key"
+		}
+	}
+	fmt.Println("SSH Server Started...")
+
+	// Reusing the same generated key everytime
+	// ssh-keygen -lv -f ssh_host_key.pub
+	pvtBytes, err := os.ReadFile(pvt_key_loc)
+	if err != nil {
+		log.Fatal("Failed to load private key:", err.Error())
+	}
+
+	privateKey, err := gossh.ParsePrivateKey(pvtBytes)
+	if err != nil {
+		log.Fatal("Failed to parse private key:", err.Error())
+	}
+
+	// Set up the SSH server with authentication
+	ssh.Handle(func(s ssh.Session) {
+		io.WriteString(s, "Welcome to my coolass ssh server.")
+		io.WriteString(s, "Enter smn idk:\n")
+
+		scanner := bufio.NewScanner(s)
+		for scanner.Scan() {
+			text := scanner.Text()
+			switch text {
+			case "exit":
+				io.WriteString(s, "GG\n")
+				return
+
+			default:
+				io.WriteString(s, "You said:"+text)
+			}
+
+		}
+
+		if err := scanner.Err(); err != nil {
+			log.Println("Error reading SSH input:", err.Error())
+		}
+	})
+
+	server := &ssh.Server{
+		Addr: ":22",
+		HostSigners: []ssh.Signer{
+			privateKey,
+		},
+		PasswordHandler: func(ctx ssh.Context, password string) bool {
+			// ctx.User()
+			if password != "secret" {
+				return false
+			}
+
+			return true
+		},
+	}
+
+	// Start the server on port 2222
+	log.Fatal(server.ListenAndServe())
 }

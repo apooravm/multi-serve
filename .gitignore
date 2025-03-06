@@ -32,3 +32,6 @@ local/
 
 # data files
 *.pdf
+
+# Passwords/keys
+secrets/
