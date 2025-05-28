@@ -153,12 +153,12 @@ func FileTransferWs(c echo.Context) error {
 		return err
 	}
 
-	// Since we cannot respond with http errors to ws
+	// Incase error
 	if initialError != nil {
-		// Writing the reason for disconnct
+		// reason for disconnect
 		_ = ConnWriteMessage(conn, initialError.Error())
 
-		// Notifyin the client about the imminent disconnect
+		// notify client about disconnect
 		closeNotifPacket, err := CreateBinaryPacket(Version, InitialTypeCloseConnNotify)
 		if err != nil {
 			fmt.Printf("Could not create packet. %s\n", err.Error())
@@ -167,7 +167,6 @@ func FileTransferWs(c echo.Context) error {
 			_ = conn.WriteMessage(websocket.BinaryMessage, closeNotifPacket)
 		}
 
-		// Finally closing
 		_ = conn.Close()
 		return nil
 	}

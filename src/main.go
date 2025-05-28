@@ -1,23 +1,18 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"os"
-	"sync"
 
 	"github.com/apooravm/multi-serve/src/routes"
 	"github.com/apooravm/multi-serve/src/utils"
 
-	"github.com/gliderlabs/ssh"
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	// "golang.org/x/crypto/ssh"
-	gossh "golang.org/x/crypto/ssh"
 )
 
 type (
@@ -140,21 +135,24 @@ func startHTTPServer() {
 }
 
 func main() {
-	var wg sync.WaitGroup
-	wg.Add(2)
+	startHTTPServer()
+	return
 
-	go func() {
-		defer wg.Done()
-		startHTTPServer()
-	}()
-
-	go func() {
-		defer wg.Done()
-		startSSHServer()
-	}()
-
-	log.Println("Servers running...")
-	wg.Wait()
+	// var wg sync.WaitGroup
+	// wg.Add(2)
+	//
+	// go func() {
+	// 	defer wg.Done()
+	// 	startHTTPServer()
+	// }()
+	//
+	// go func() {
+	// 	defer wg.Done()
+	// 	startSSHServer()
+	// }()
+	//
+	// log.Println("Servers running...")
+	// wg.Wait()
 }
 
 func handleNotesRes(c echo.Context) error {
@@ -165,66 +163,103 @@ func DefaultGroup(group *echo.Group) {
 	routes.ApiGroup(group.Group("/api"))
 }
 
-func startSSHServer() {
-	pvt_key_loc := "/etc/secrets/multi_serve_ssh_key"
-	if len(os.Args) > 1 {
-		if os.Args[1] == "dev" {
-			pvt_key_loc = "./secrets/multi_serve_ssh_key"
-		}
-	}
-	fmt.Println("SSH Server Started...")
-
-	// Reusing the same generated key everytime
-	// ssh-keygen -lv -f ssh_host_key.pub
-	pvtBytes, err := os.ReadFile(pvt_key_loc)
-	if err != nil {
-		log.Fatal("Failed to load private key:", err.Error())
-	}
-
-	privateKey, err := gossh.ParsePrivateKey(pvtBytes)
-	if err != nil {
-		log.Fatal("Failed to parse private key:", err.Error())
-	}
-
-	// Set up the SSH server with authentication
-	ssh.Handle(func(s ssh.Session) {
-		io.WriteString(s, "Welcome to my coolass ssh server.")
-		io.WriteString(s, "Enter smn idk:\n")
-
-		scanner := bufio.NewScanner(s)
-		for scanner.Scan() {
-			text := scanner.Text()
-			switch text {
-			case "exit":
-				io.WriteString(s, "GG\n")
-				return
-
-			default:
-				io.WriteString(s, "You said:"+text)
-			}
-
-		}
-
-		if err := scanner.Err(); err != nil {
-			log.Println("Error reading SSH input:", err.Error())
-		}
-	})
-
-	server := &ssh.Server{
-		Addr: ":22",
-		HostSigners: []ssh.Signer{
-			privateKey,
-		},
-		PasswordHandler: func(ctx ssh.Context, password string) bool {
-			// ctx.User()
-			if password != "secret" {
-				return false
-			}
-
-			return true
-		},
-	}
-
-	// Start the server on port 2222
-	log.Fatal(server.ListenAndServe())
-}
+// func startSSHServer() {
+// 	pvt_key_loc := "/etc/secrets/multi_serve_ssh_key"
+// 	if len(os.Args) > 1 {
+// 		if os.Args[1] == "dev" {
+// 			pvt_key_loc = "./secrets/multi_serve_ssh_key"
+// 		}
+// 	}
+// 	fmt.Println("SSH Server Started...")
+//
+// 	// Reusing the same generated key everytime
+// 	// ssh-keygen -lv -f ssh_host_key.pub
+// 	pvtBytes, err := os.ReadFile(pvt_key_loc)
+// 	if err != nil {
+// 		log.Fatal("Failed to load private key:", err.Error())
+// 	}
+//
+// 	privateKey, err := gossh.ParsePrivateKey(pvtBytes)
+// 	if err != nil {
+// 		log.Fatal("Failed to parse private key:", err.Error())
+// 	}
+//
+// 	// Set up the SSH server with authentication
+// 	ssh.Handle(func(s ssh.Session) {
+// 		io.WriteString(s, "Welcome to my coolass ssh server.\n")
+// 		io.WriteString(s, "Enter smn idk:\n")
+//
+// 		if _, _, isPty := s.Pty(); isPty {
+// 			term := term.NewTerminal(s, "> ")
+// 			for {
+// 				line, err := term.ReadLine()
+// 				if err != nil {
+// 					break
+// 				}
+// 				switch line {
+// 				case "exit":
+// 					term.Write([]byte("GG\n"))
+// 					return
+//
+// 				default:
+// 					term.Write([]byte(fmt.Sprintf("You said: %s\n", line)))
+// 				}
+// 			}
+// 		} else {
+// 			scanner := bufio.NewScanner(s)
+// 			io.WriteString(s, "Enter smn idk:\n")
+//
+// 			for scanner.Scan() {
+// 				text := scanner.Text()
+// 				switch text {
+// 				case "exit":
+// 					io.WriteString(s, "GG\n")
+// 					return
+//
+// 				default:
+// 					io.WriteString(s, "You said: "+text+"\n")
+// 				}
+// 			}
+//
+// 			if err := scanner.Err(); err != nil {
+// 				log.Println("Error reading ssh input:", err.Error())
+// 			}
+// 		}
+//
+// 		// scanner := bufio.NewScanner(s)
+// 		// for scanner.Scan() {
+// 		// 	text := scanner.Text()
+// 		// 	switch text {
+// 		// 	case "exit":
+// 		// 		io.WriteString(s, "GG\n")
+// 		// 		return
+// 		//
+// 		// 	default:
+// 		// 		io.WriteString(s, "You said:"+text)
+// 		// 	}
+// 		//
+// 		// }
+//
+// 		// if err := scanner.Err(); err != nil {
+// 		// 	log.Println("Error reading SSH input:", err.Error())
+// 		// }
+// 	})
+//
+// 	server := &ssh.Server{
+// 		Addr: ":22",
+// 		HostSigners: []ssh.Signer{
+// 			privateKey,
+// 		},
+// 		PasswordHandler: func(ctx ssh.Context, password string) bool {
+// 			// ctx.User()
+// 			if password != "secret" {
+// 				return false
+// 			}
+//
+// 			return true
+// 		},
+// 	}
+//
+// 	// Start the server on port 2222
+// 	log.Fatal(server.ListenAndServe())
+// }

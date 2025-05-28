@@ -5,6 +5,7 @@ import (
 
 	"github.com/apooravm/multi-serve/src/routes/dummy_ws"
 	filetransfer "github.com/apooravm/multi-serve/src/routes/filetransfer"
+	tunneling "github.com/apooravm/multi-serve/src/routes/tunneling"
 	untitledgame "github.com/apooravm/multi-serve/src/routes/untitled-game"
 	"github.com/apooravm/multi-serve/src/utils"
 	"github.com/labstack/echo/v4"
@@ -28,6 +29,10 @@ func ApiGroup(group *echo.Group) {
 	group.GET("/game", untitledgame.UntitledGameSocket)
 	group.GET("/share", filetransfer.FileTransferWs)
 
+	tunneling.TunnelingGroup(group.Group("/tunnel"))
+	// group.GET("/tunnel", tunneling.Tunneling)
+	WebClipboardGroup(group.Group("/clipboard"))
+
 	S3FileFetchGroup(group.Group("/files"))
 	S3FileFetchGroup(group.Group("/files"))
 	NotesGroup(group.Group("/notes"))
@@ -35,7 +40,6 @@ func ApiGroup(group *echo.Group) {
 	MiscGroup(group.Group("/misc"))
 	JournalLoggerGroup(group.Group(("/journal")))
 	UserGroup(group.Group("/user"))
-	WebClipboardGroup(group.Group("/clipboard"))
 }
 
 // Refreshes the local server Data
