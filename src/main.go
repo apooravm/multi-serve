@@ -38,6 +38,7 @@ func startHTTPServer() {
 	utils.InitDirs()
 	utils.S3_ObjectInfoArr()
 	utils.InitFiles()
+	utils.InitSetupFunc()
 
 	hosts := map[string]*Host{}
 

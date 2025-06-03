@@ -3,10 +3,13 @@ package tunneling
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/gob"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/apooravm/multi-serve/src/utils"
 	"github.com/gorilla/websocket"
@@ -23,29 +26,26 @@ type TunnelHost struct {
 }
 
 var (
-	TunnelHostMap  *utils.ClientsMap[TunnelHost] = utils.NewClientsMap[TunnelHost]()
-	code_generator utils.Code_Generator          = utils.Code_Generator{
-		Start_ID: 1,
-	}
+	TunnelHostMap *utils.ClientsMap[TunnelHost] = utils.NewClientsMap[TunnelHost]()
 )
 
 // Differentiating between CLI and browser
 // If tunneling/host -> Host CLI
 // If tunneling/<CODE>/ -> client browser
 func TunnelingGroup(group *echo.Group) {
-	group.GET("/host", HandlHostTunnel)
+	group.GET("/host", HandleHostTunnel)
 	// redirect /:code to /:code/
 	group.GET("/:code", func(c echo.Context) error {
 		code := c.Param("code")
 		return c.Redirect(http.StatusPermanentRedirect, "/api/tunnel/"+code+"/")
 	})
-	group.GET("/:code/*", HandleClientTunnel)
+	group.Any("/:code/*", HandleClientTunnel)
 }
 
-// Creates a binary packet with the given components. Byte order big endian
-// First part should be the version
-// Second the message code
-// Third the data if available
+// Creates a binary packet with the given components. Byte order big endian.
+// First part should be the VERSION.
+// Second the MESSAGE_CODE.
+// Third the DATA (optional).
 func CreateBinaryPacket(parts ...any) ([]byte, error) {
 	responseBfr := new(bytes.Buffer)
 	for _, part := range parts {
@@ -73,27 +73,10 @@ func CreateBinaryPacket(parts ...any) ([]byte, error) {
 // Check for validity, etc
 // Send back unique code
 // Register same unique code as a route, ie; tunneling/:1234/...
-func Tunneling(c echo.Context) error {
-	params := c.QueryParams()
-	intentArgs := params["intent"]
-
-	if len(intentArgs) == 0 {
-		return c.JSON(echo.ErrBadRequest.Code, utils.ClientErr("No intent found. Must be send/receive."))
-	}
-
-	// var initialError error = nil
-
-	// Client part should end in it returning HTML. No need to keep it alive (For now).
-
-	return nil
-}
-
-func HandlHostTunnel(c echo.Context) error {
+func HandleHostTunnel(c echo.Context) error {
 	// TODO: Authorize conn ...
-	// TODO: Generate unique code
 	// TODO: Make it work with > uint8 unique_code
 
-	var code uint8 = 255
 	// buf := new(bytes.Buffer)
 	// // TODO: Handle error here
 	// _ = binary.Write(buf, binary.BigEndian, int32(code))
@@ -110,9 +93,18 @@ func HandlHostTunnel(c echo.Context) error {
 
 	defer conn.Close()
 
-	fmt.Println("Host here")
+	var code uint8 = utils.Tunneling_code_generator.NewCode()
+	pkt, _ := CreateBinaryPacket(byte(1), byte(1), code)
+
+	// send the newly generated code back to CLI
+	if err := conn.WriteMessage(websocket.BinaryMessage, pkt); err != nil {
+		utils.LogData("E:tunneling.go Could not write code to host socket.")
+		conn.Close()
+
+		return nil
+	}
+
 	// generate code
-	code = 255
 	var newTunnelingHost TunnelHost
 	newTunnelingHost.Code = code
 	newTunnelingHost.TransferStopped = false
@@ -127,49 +119,28 @@ func HandlHostTunnel(c echo.Context) error {
 
 	// Keeps conn alive
 	for {
-		// fmt.Println("tf??")
-		// var conn_message []byte
-		// _, conn_message, err := conn.ReadMessage()
-		// if err != nil {
-		// 	conn.Close()
-		// 	return nil
-		// }
-		//
-		// switch conn_message[1] {
-		// case 1:
-		// 	var currentTunnelHost TunnelHost
-		// 	currentTunnelHost.TunnelConn = conn
-		// 	currentTunnelHost.TunnelName = "cool_tunnel"
-		// 	currentTunnelHost.Code = code
-		//
-		// 	TunnelHostMap.AddClient(strconv.Itoa(int(code)), &currentTunnelHost)
-		//
-		// 	fmt.Println(TunnelHostMap)
-		//
-		// 	pkt, err := CreateBinaryPacket(byte(1), byte(2), code)
-		// 	if err != nil {
-		// 		log.Println("E:tunneling.go Could not create binary packet", err.Error())
-		// 		conn.Close()
-		// 		return nil
-		// 	}
-		//
-		// 	if err = conn.WriteMessage(websocket.BinaryMessage, pkt); err != nil {
-		// 		log.Println("E:tunneling.go Could not write to socket", err.Error())
-		// 		conn.Close()
-		// 		return nil
-		// 	}
-		//
-		// default:
-		// 	fmt.Println("🤷‍♀️")
-		// 	conn.Close()
-		// 	return nil
-		// }
+
 	}
+}
+
+type TunnelRequestPayload struct {
+	Method  string
+	Path    string
+	Headers map[string]string
+	Body    []byte
+}
+
+type TunnelResponsePayload struct {
+	StatusCode int
+	Headers    map[string]string
+	Body       []byte
 }
 
 func HandleClientTunnel(c echo.Context) error {
 	incomingCode := c.Param("code")
 	routepath := c.Param("*")
+
+	fmt.Println("Route path:", routepath)
 
 	// Check if transfer exists
 	targetTunnel, exists := TunnelHostMap.GetClient(incomingCode)
@@ -181,11 +152,40 @@ func HandleClientTunnel(c echo.Context) error {
 		})
 	}
 
+	reqBodyBytes, err := io.ReadAll(c.Request().Body)
+	if err != nil {
+		return c.JSON(echo.ErrInternalServerError.Code, &utils.ErrorMessage{
+			Code:    echo.ErrInternalServerError.Code,
+			Message: "Failed to read body",
+		})
+	}
+
+	reqHeaders := map[string]string{}
+	for k, v := range c.Request().Header {
+		reqHeaders[k] = strings.Join(v, ",")
+	}
+
+	reqPayload := TunnelRequestPayload{
+		Method:  c.Request().Method,
+		Body:    reqBodyBytes,
+		Headers: reqHeaders,
+		Path:    routepath,
+	}
+
+	var requestBuf bytes.Buffer
+	enc := gob.NewEncoder(&requestBuf)
+	if err = enc.Encode(reqPayload); err != nil {
+		return c.JSON(echo.ErrInternalServerError.Code, &utils.ErrorMessage{
+			Code:    echo.ErrInternalServerError.Code,
+			Message: "E: Serializing to request buffer.",
+		})
+	}
+
 	// fmt.Println("Tunnel found")
 	// fmt.Println(targetTunnel.TunnelName)
 
 	// Request data here, message code = 3
-	pkt, _ := CreateBinaryPacket(byte(1), byte(3), []byte(routepath))
+	pkt, _ := CreateBinaryPacket(byte(1), byte(2), requestBuf.Bytes())
 	if err := targetTunnel.TunnelConn.WriteMessage(websocket.BinaryMessage, pkt); err != nil {
 		log.Println("E:tunneling.go Could not write to socket", err.Error())
 		targetTunnel.TunnelConn.Close()
@@ -207,5 +207,32 @@ func HandleClientTunnel(c echo.Context) error {
 		return nil
 	}
 
-	return c.HTML(http.StatusOK, string(message))
+	switch message[1] {
+	case byte(3):
+		// html_data = string(message[2:])
+		var responsePayloadBuf TunnelResponsePayload
+		dec := gob.NewDecoder(bytes.NewReader(message[2:]))
+		if err := dec.Decode(&responsePayloadBuf); err != nil {
+			return c.JSON(echo.ErrInternalServerError.Code, &utils.ErrorMessage{
+				Code:    echo.ErrInternalServerError.Code,
+				Message: "E: Decoding serialized response buffer.",
+			})
+		}
+
+		// write headers, statuscode and headers to res
+		for k, v := range responsePayloadBuf.Headers {
+			c.Response().Header().Set(k, v)
+		}
+
+		c.Response().WriteHeader(responsePayloadBuf.StatusCode)
+		_, err := c.Response().Write(responsePayloadBuf.Body)
+		if err != nil {
+			return c.JSON(echo.ErrInternalServerError.Code, &utils.ErrorMessage{
+				Code:    echo.ErrInternalServerError.Code,
+				Message: "E: Writing body bytes to response.",
+			})
+		}
+	}
+
+	return err
 }
