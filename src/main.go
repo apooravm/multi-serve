@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/apooravm/multi-serve/src/routes"
 	"github.com/apooravm/multi-serve/src/utils"
@@ -19,6 +20,11 @@ type (
 	Host struct {
 		Echo *echo.Echo
 	}
+)
+
+var (
+	ticker = time.NewTicker(3 * time.Second)
+	quit   = make(chan struct{})
 )
 
 // TODO: Subdomains not working for now
@@ -135,7 +141,40 @@ func startHTTPServer() {
 	// server.Logger.Fatal(server.Start(":" + PORT))
 }
 
+// Executed every 5 minutes
+func cron_jobs() {
+	api_endpoint := "https://multi-serve.onrender.com/api/ping"
+	if os.Args[0] == "dev" {
+		api_endpoint = fmt.Sprintf("http://localhost:%s", utils.PORT)
+	}
+
+	_, err := http.Get(api_endpoint)
+	if err != nil {
+		fmt.Println("Error pinging. %s", err.Error())
+	} else {
+		// fmt.Println(res.Status)
+	}
+}
+
+func idk() {
+	fmt.Println("Starting CRON jobs")
+	for {
+		select {
+		case <-ticker.C:
+			cron_jobs()
+
+		case <-quit:
+			ticker.Stop()
+			return
+		}
+	}
+}
+
 func main() {
+	go func() {
+		idk()
+	}()
+
 	startHTTPServer()
 	return
 
