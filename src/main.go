@@ -23,7 +23,7 @@ type (
 )
 
 var (
-	ticker = time.NewTicker(3 * time.Second)
+	ticker = time.NewTicker(8 * time.Minute)
 	quit   = make(chan struct{})
 )
 
