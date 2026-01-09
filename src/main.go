@@ -23,17 +23,17 @@ type (
 )
 
 var (
-	ticker = time.NewTicker(8 * time.Minute)
-	quit   = make(chan struct{})
+	ticker     = time.NewTicker(8 * time.Minute)
+	quit       = make(chan struct{})
+	DEV_MODE   = false
+	DOMAIN_URL = "apooravm.xyz"
 )
 
-// TODO: Subdomains not working for now
-// Need to purchase a custom domain for that
-// Problem for future self
-// Disabling subdomains for now
 func startHTTPServer() {
 	if len(os.Args) > 1 {
 		if os.Args[1] == "dev" {
+			DEV_MODE = true
+			log.Println("Dev mode")
 			if err := godotenv.Load("./secrets/.env"); err != nil {
 				log.Println("Error loading .env file")
 			}
@@ -71,10 +71,12 @@ func startHTTPServer() {
 	blog.Use(middleware.Logger())
 	blog.Use(middleware.Recover())
 
-	blog_endpoint := "blog.apooravm.xyz"
-	if os.Args[0] == "dev" {
+	blog_endpoint := "blog." + DOMAIN_URL
+	if DEV_MODE {
 		blog_endpoint = fmt.Sprintf("blog.localhost:%s", PORT)
 	}
+	fmt.Printf(blog_endpoint)
+
 	hosts[blog_endpoint] = &Host{blog}
 
 	blog.GET("/", func(c echo.Context) error {
@@ -109,17 +111,38 @@ func startHTTPServer() {
 			return nil
 		},
 	}))
+
 	api.Use(middleware.Recover())
 	api.Static("/", "public")
-	api_endpoint := "apooravm.xyz"
-	if os.Args[0] == "dev" {
+	api_endpoint := DOMAIN_URL
+
+	if DEV_MODE {
 		api_endpoint = fmt.Sprintf("localhost:%s", PORT)
 	}
+
 	hosts[api_endpoint] = &Host{api}
 
 	api.GET("/help", handleNotesRes)
-	DefaultGroup(api.Group(""))
-	api.Logger.Fatal(api.Start(":" + PORT))
+	// DefaultGroup(api.Group(""))
+
+	e := echo.New()
+	e.Any("/*", func(c echo.Context) error {
+		req := c.Request()
+		res := c.Response()
+		host := hosts[req.Host]
+		var err error = nil
+
+		if host == nil {
+			err = echo.ErrNotFound
+			log.Println("host not found")
+
+		} else {
+			host.Echo.ServeHTTP(res, req)
+		}
+
+		return err
+	})
+	e.Logger.Fatal(e.Start(":" + PORT))
 
 	// server := echo.New()
 	// server.Any("/*", func(c echo.Context) error {
@@ -142,9 +165,10 @@ func startHTTPServer() {
 }
 
 // Executed every 5 minutes
+// mainly to get around renders idle time limit
 func cron_jobs() {
-	api_endpoint := "https://multi-serve.onrender.com/api/ping"
-	if os.Args[0] == "dev" {
+	api_endpoint := "https://" + DOMAIN_URL + "/api/ping"
+	if DEV_MODE {
 		api_endpoint = fmt.Sprintf("http://localhost:%s", utils.PORT)
 	}
 
@@ -170,6 +194,9 @@ func idk() {
 	}
 }
 
+// Render only supports http servers
+// to make a proper UDP/SSH/TCP/whatever compatible one
+// need to host on a compute instance
 func main() {
 	go func() {
 		idk()
