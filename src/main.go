@@ -71,7 +71,7 @@ func startHTTPServer() {
 	blog.Use(middleware.Logger())
 	blog.Use(middleware.Recover())
 
-	blog_endpoint := "blog.multi-serve.onrender.com"
+	blog_endpoint := "blog.apooravm.xyz"
 	if os.Args[0] == "dev" {
 		blog_endpoint = fmt.Sprintf("blog.localhost:%s", PORT)
 	}
@@ -111,7 +111,7 @@ func startHTTPServer() {
 	}))
 	api.Use(middleware.Recover())
 	api.Static("/", "public")
-	api_endpoint := "multi-serve.onrender.com"
+	api_endpoint := "apooravm.xyz"
 	if os.Args[0] == "dev" {
 		api_endpoint = fmt.Sprintf("localhost:%s", PORT)
 	}
