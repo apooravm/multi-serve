@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/apooravm/multi-serve/src/routes"
+	"github.com/apooravm/multi-serve/src/subdomains"
 	"github.com/apooravm/multi-serve/src/utils"
 
 	"github.com/joho/godotenv"
@@ -126,22 +127,23 @@ func startHTTPServer() {
 	// DefaultGroup(api.Group(""))
 
 	e := echo.New()
-	e.Any("/*", func(c echo.Context) error {
-		req := c.Request()
-		res := c.Response()
-		host := hosts[req.Host]
-		var err error = nil
-
-		if host == nil {
-			err = echo.ErrNotFound
-			log.Println("host not found")
-
-		} else {
-			host.Echo.ServeHTTP(res, req)
-		}
-
-		return err
-	})
+	e.Use(subdomains.SubdomainMiddleware())
+	// e.Any("/*", func(c echo.Context) error {
+	// 	req := c.Request()
+	// 	res := c.Response()
+	// 	host := hosts[req.Host]
+	// 	var err error = nil
+	//
+	// 	if host == nil {
+	// 		err = echo.ErrNotFound
+	// 		log.Println("host not found")
+	//
+	// 	} else {
+	// 		host.Echo.ServeHTTP(res, req)
+	// 	}
+	//
+	// 	return err
+	// })
 	e.Logger.Fatal(e.Start(":" + PORT))
 
 	// server := echo.New()
