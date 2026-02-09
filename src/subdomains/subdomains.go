@@ -1,7 +1,7 @@
 package subdomains
 
 import (
-	"log"
+	"fmt"
 	"strings"
 
 	"github.com/labstack/echo/v4"
@@ -16,25 +16,37 @@ var ReservedSubdomains = map[string]bool{
 var DOMAIN = "apooravm.xyz"
 
 func ExtractSubdomain(host, rootDomain string) (string, bool) {
-	// remove the port if exists
 	host = strings.Split(host, ":")[0]
 	host = strings.ToLower(host)
 
-	log.Println(host, rootDomain)
+	// Handle localhost specially
+	if rootDomain == "localhost" {
+		if host == "localhost" {
+			return "", false
+		}
 
+		if strings.HasSuffix(host, ".localhost") {
+			sub := strings.TrimSuffix(host, ".localhost")
+			if strings.Contains(sub, ".") {
+				return "", false
+			}
+			return sub, true
+		}
+
+		return "", false
+	}
+
+	// Normal domain logic
 	if host == rootDomain {
 		return "", false
 	}
 
 	suffix := "." + rootDomain
-
 	if !strings.HasSuffix(host, suffix) {
 		return "", false
 	}
 
 	sub := strings.TrimSuffix(host, suffix)
-
-	// prevent multi subdomains, a.b.apooravm.xyz
 	if strings.Contains(sub, ".") {
 		return "", false
 	}
@@ -49,9 +61,6 @@ func SubdomainMiddleware() echo.MiddlewareFunc {
 				c.Request().Host,
 				DOMAIN,
 			)
-			log.Println("In func, Host:", c.Request().Host)
-
-			log.Println("here 3")
 
 			if !ok {
 				return next(c)
@@ -67,8 +76,8 @@ func SubdomainMiddleware() echo.MiddlewareFunc {
 			// 	return echo.ErrBadRequest
 			// }
 
-			c.Set("tenantUser", "USER_OBJ_HERE")
-			log.Println("USER HERE", sub)
+			c.Set("subdomain", sub)
+			fmt.Println("SUBDOMAIN", sub)
 			return next(c)
 		}
 	}

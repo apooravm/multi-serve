@@ -31,6 +31,7 @@ var (
 )
 
 func startHTTPServer() {
+	// dev mode
 	if len(os.Args) > 1 {
 		if os.Args[1] == "dev" {
 			DEV_MODE = true
@@ -41,13 +42,12 @@ func startHTTPServer() {
 		}
 	}
 
+	// Init vars
 	utils.InitGlobalVars()
 	utils.InitDirs()
 	utils.S3_ObjectInfoArr()
 	utils.InitFiles()
 	utils.InitSetupFunc()
-
-	hosts := map[string]*Host{}
 
 	// Download files; resume and such
 	if err := utils.S3_DownloadFiles(); err != nil {
@@ -68,23 +68,21 @@ func startHTTPServer() {
 	PORT := utils.PORT
 	utils.LogData("Live on PORT", PORT, "🔥")
 
-	blog := echo.New()
-	blog.Use(middleware.Logger())
-	blog.Use(middleware.Recover())
+	// main server code
+	e := echo.New()
+	e.Use(middleware.Recover())
+	e.Use(middleware.Logger())
 
-	blog_endpoint := "blog." + DOMAIN_URL
-	if DEV_MODE {
-		blog_endpoint = fmt.Sprintf("blog.localhost:%s", PORT)
-	}
-	fmt.Printf(blog_endpoint)
+	// resolve subdomains
+	e.Use(subdomains.SubdomainMiddleware())
 
-	hosts[blog_endpoint] = &Host{blog}
-
-	blog.GET("/", func(c echo.Context) error {
+	// blog routes
+	e.Host("blog.*").Any("/*", func(c echo.Context) error {
 		return c.String(http.StatusOK, "Blog")
 	})
 
-	api := echo.New()
+	// API routes
+	api := e.Group("")
 	api.Use(middleware.CORS())
 	api.Use(middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
 		LogStatus: true,
@@ -113,57 +111,23 @@ func startHTTPServer() {
 		},
 	}))
 
-	api.Use(middleware.Recover())
-	api.Static("/", "public")
-	api_endpoint := DOMAIN_URL
-
-	if DEV_MODE {
-		api_endpoint = fmt.Sprintf("localhost:%s", PORT)
-	}
-
-	hosts[api_endpoint] = &Host{api}
-
 	api.GET("/help", handleNotesRes)
-	// DefaultGroup(api.Group(""))
+	DefaultGroup(api)
 
-	e := echo.New()
-	e.Use(subdomains.SubdomainMiddleware())
-	// e.Any("/*", func(c echo.Context) error {
-	// 	req := c.Request()
-	// 	res := c.Response()
-	// 	host := hosts[req.Host]
-	// 	var err error = nil
-	//
-	// 	if host == nil {
-	// 		err = echo.ErrNotFound
-	// 		log.Println("host not found")
-	//
-	// 	} else {
-	// 		host.Echo.ServeHTTP(res, req)
-	// 	}
-	//
-	// 	return err
-	// })
+	// fallback?
+	e.Static("/", "public")
+	e.Any("/*", func(c echo.Context) error {
+		sub := c.Get("subdomain")
+
+		log.Println("SUBDOMIAN HERE", sub)
+
+		if sub == nil {
+			return c.String(http.StatusOK, "Main app")
+		}
+
+		return c.String(http.StatusOK, fmt.Sprintf("Tenant: %s", sub))
+	})
 	e.Logger.Fatal(e.Start(":" + PORT))
-
-	// server := echo.New()
-	// server.Any("/*", func(c echo.Context) error {
-	// 	req := c.Request()
-	// 	res := c.Response()
-	// 	host := hosts[req.Host]
-	// 	var err error
-	//
-	// 	if host == nil {
-	// 		err = echo.ErrNotFound
-	//
-	// 	} else {
-	// 		host.Echo.ServeHTTP(res, req)
-	// 	}
-	//
-	// 	return err
-	// })
-	//
-	// server.Logger.Fatal(server.Start(":" + PORT))
 }
 
 // Executed every 5 minutes
